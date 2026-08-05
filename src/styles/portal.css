@@ -1,0 +1,665 @@
+/* ISMS portal — layout and components (implements ISMS Portal.dc.html) */
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-neutral-50);
+  color: var(--color-neutral-1000);
+}
+
+a { color: var(--color-primary-600); }
+a:hover { color: var(--color-primary-700); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 8px; }
+
+button { font-family: inherit; }
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Header ---------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 32px;
+  background: var(--color-neutral-0);
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.header__brand {
+  display: flex; align-items: center; gap: 14px;
+  background: none; border: none; margin: 0; padding: 4px; border-radius: var(--radius-s);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.header__brand:hover { background: var(--color-neutral-50); }
+.header__brand:focus-visible { outline: 2px solid var(--color-primary-400); outline-offset: 2px; }
+
+.header__logo { width: 28px; height: 36px; flex: none; display: block; }
+
+.header__title { font-size: 16px; font-weight: 700; color: var(--color-neutral-1000); line-height: 1.2; }
+.header__subtitle { font-size: 12.5px; color: var(--color-neutral-600); line-height: 1.2; }
+
+.header__meta { display: flex; align-items: center; gap: 12px; }
+.header__divider { width: 1px; height: 24px; background: var(--color-neutral-200); }
+.header__user { text-align: right; }
+.header__user-name { font-size: 13.5px; font-weight: 600; color: var(--color-neutral-900); }
+.header__user-role { font-size: 12px; color: var(--color-neutral-600); }
+
+/* ---------- Shell ---------- */
+
+.shell { display: flex; flex: 1; min-height: 0; }
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+  width: 272px;
+  flex: none;
+  background: var(--color-neutral-0);
+  border-right: 1px solid var(--color-neutral-200);
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+
+.sidebar__heading {
+  padding: 0 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+
+.nav-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-s);
+  color: var(--color-neutral-800);
+  font-weight: 400;
+  padding: 10px 12px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 3px solid transparent;
+}
+
+.nav-item:hover { background: var(--color-neutral-50); }
+
+.nav-item.is-active {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-weight: 600;
+  border-left-color: var(--color-primary-600);
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding: 16px 12px 0;
+  border-top: 1px solid var(--color-neutral-200);
+  font-size: 12px;
+  color: var(--color-neutral-500);
+  line-height: 1.5;
+}
+
+/* ---------- Main ---------- */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 40px 64px;
+  overflow-y: auto;
+}
+
+.page-title { font-size: 32px; font-weight: 700; color: var(--color-neutral-1000); margin: 0 0 4px; }
+.page-lead { font-size: 15px; color: var(--color-neutral-700); margin: 0 0 28px; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.page-header .page-lead { margin-bottom: 0; }
+
+.section-title { font-size: 20px; font-weight: 600; color: var(--color-neutral-1000); margin: 0 0 14px; }
+
+/* ---------- Buttons (gov.cz solid primary) ---------- */
+
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0 20px;
+  height: 40px;
+  border-radius: var(--radius-s);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn--primary { background: var(--color-primary-600); color: var(--color-neutral-0); }
+.btn--primary:hover { background: var(--color-primary-700); }
+.btn--primary:active { background: var(--color-primary-800); }
+.btn:focus-visible { outline: 2px solid var(--color-primary-400); outline-offset: 2px; }
+
+/* ---------- Badges (gov.cz) ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge--default { background: var(--color-primary-100); color: var(--color-primary-700); }
+.badge--success { background: var(--color-success-100); color: var(--color-success-600); border: 1px solid var(--color-success-200); }
+.badge--warning { background: var(--color-warning-100); color: var(--color-warning-600); border: 1px solid var(--color-warning-200); }
+.badge--alert   { background: var(--color-error-100);   color: var(--color-error-600);   border: 1px solid var(--color-error-200); }
+.badge--neutral { background: var(--color-neutral-100); color: var(--color-neutral-700); border: 1px solid var(--color-neutral-200); }
+
+/* ---------- Cards / panels ---------- */
+
+.card {
+  background: var(--color-neutral-0);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-m);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpi { padding: 20px; }
+.kpi__label { font-size: 13px; color: var(--color-neutral-700); margin-bottom: 8px; }
+.kpi__value { font-size: 30px; font-weight: 700; }
+.kpi__sub { font-size: 12px; color: var(--color-neutral-500); margin-top: 4px; }
+
+/* ---------- Alerts ---------- */
+
+.alerts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius-s);
+  border: 1px solid;
+}
+.alert__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.alert__text { font-size: 14px; color: var(--color-neutral-900); }
+
+.alert--warning { background: #fdf6e3; border-color: #e8d9a0; }
+.alert--warning .alert__dot { background: var(--status-warn); }
+.alert--danger { background: #fbeaea; border-color: #eec3c3; }
+.alert--danger .alert__dot { background: var(--status-danger); }
+
+/* ---------- Dashboard two-column ---------- */
+
+.dashboard-cols {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Progress bars */
+.progress-list { display: flex; flex-direction: column; gap: 12px; }
+.progress__head { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+.progress__name { color: var(--color-neutral-900); font-weight: 500; }
+.progress__pct { color: var(--color-neutral-700); }
+.progress__track { height: 8px; border-radius: 4px; background: var(--color-neutral-200); overflow: hidden; }
+.progress__fill { height: 100%; }
+
+/* Deadlines */
+.deadlines { overflow: hidden; }
+.deadline {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-neutral-100);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.deadline:last-child { border-bottom: 0; }
+.deadline__title { font-size: 14px; font-weight: 500; color: var(--color-neutral-900); }
+.deadline__owner { font-size: 12.5px; color: var(--color-neutral-600); }
+.deadline__date { font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+/* ---------- Data tables ---------- */
+
+.table-card { overflow: hidden; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+.table th {
+  background: var(--color-neutral-50);
+  border-bottom: 1px solid var(--color-neutral-200);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-neutral-700);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  text-align: left;
+  padding: 12px 16px;
+}
+
+.table td {
+  border-bottom: 1px solid var(--color-neutral-100);
+  padding: 12px 16px;
+  color: var(--color-neutral-900);
+  vertical-align: middle;
+}
+
+.table tr:last-child td { border-bottom: 0; }
+
+.table .cell-id { font-weight: 600; color: var(--color-neutral-700); }
+.table .cell-muted { color: var(--color-neutral-700); }
+.table .cell-strong { font-weight: 500; color: var(--color-neutral-900); }
+.table .cell-sub { font-size: 12.5px; color: var(--color-neutral-700); }
+
+/* ---------- Card grids (policies, trainings) ---------- */
+
+.card-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.policy { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.policy__category {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--color-primary-600);
+}
+.policy__name { font-size: 16px; font-weight: 600; color: var(--color-neutral-1000); line-height: 1.3; }
+.policy__meta { font-size: 13px; color: var(--color-neutral-600); }
+.policy__badge { margin-top: 6px; }
+
+.training { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.training__name { font-size: 16px; font-weight: 600; color: var(--color-neutral-1000); }
+.training__meta { font-size: 13px; color: var(--color-neutral-600); }
+.training .progress__track { margin-top: 4px; }
+.training__stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+.training__stats strong { font-weight: 600; }
+
+/* ---------- FAQ accordion (gov.cz) ---------- */
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--color-neutral-200);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+
+.faq { background: var(--color-neutral-0); }
+
+.accordion {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--color-primary-600);
+}
+
+.accordion:hover { color: var(--color-primary-700); background: var(--color-primary-50); }
+
+.accordion__chevron { flex: none; transition: transform .15s ease; color: currentColor; }
+.accordion[aria-expanded="true"] .accordion__chevron { transform: rotate(180deg); }
+
+.faq__answer {
+  padding: 0 20px 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-neutral-700);
+}
+
+/* ---------- Footer ---------- */
+
+.footer { padding: 18px 32px; background: var(--color-neutral-900); color: var(--color-neutral-0); }
+.footer__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.footer__main { font-size: 13px; opacity: .85; }
+.footer__version { font-size: 12px; opacity: .6; }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .card-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-cols { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 800px) {
+  .shell { flex-direction: column; }
+  .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--color-neutral-200); }
+  .main { padding: 24px 20px 48px; }
+  .kpi-grid, .card-grid-3 { grid-template-columns: 1fr; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .table-card { overflow-x: auto; }
+}
+
+
+/* ---------- Modaly a formulare (akcni tlacitka) ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--color-neutral-0);
+  border-radius: var(--radius-m);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+}
+
+.modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.modal__title { font-size: 20px; font-weight: 600; margin: 0; color: var(--color-neutral-1000); }
+
+.modal__close {
+  border: 0;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-neutral-600);
+  padding: 2px 6px;
+  border-radius: var(--radius-s);
+}
+.modal__close:hover { color: var(--color-neutral-1000); background: var(--color-neutral-100); }
+
+.modal__body { padding: 20px 24px 24px; }
+
+.form-grid { display: flex; flex-direction: column; gap: 14px; }
+
+.field label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-neutral-800);
+  margin-bottom: 6px;
+}
+
+.input, .select, .textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-s);
+  background: var(--color-neutral-0);
+  color: var(--color-neutral-1000);
+}
+
+.textarea { resize: vertical; min-height: 64px; }
+
+.input:focus, .select:focus, .textarea:focus {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: 1px;
+  border-color: var(--color-primary-500);
+}
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.form-hint { font-size: 12.5px; color: var(--color-neutral-600); margin-top: 4px; }
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn--secondary {
+  background: var(--color-neutral-0);
+  color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+}
+.btn--secondary:hover { background: var(--color-primary-50); }
+
+
+/* ---------- Stavy nacitani dat z API ---------- */
+
+.data-state {
+  padding: 32px;
+  font-size: 14px;
+  color: var(--color-neutral-600);
+}
+
+.data-state--error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--color-error-600);
+  background: var(--color-error-100);
+  border: 1px solid var(--color-error-200);
+  border-radius: var(--radius-s);
+}
+
+.form-error {
+  font-size: 13.5px;
+  color: var(--color-error-600);
+  background: var(--color-error-100);
+  border: 1px solid var(--color-error-200);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+}
+
+
+/* ---------- Akcni ikonky radku ---------- */
+
+.row-actions { display: flex; gap: 2px; justify-content: flex-end; }
+
+.icon-btn {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--color-neutral-500);
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+.icon-btn:hover { color: var(--color-primary-600); background: var(--color-primary-50); }
+.icon-btn--danger:hover { color: var(--color-error-500); background: var(--color-error-100); }
+
+.policy__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.form-static {
+  font-size: 14px;
+  color: var(--color-neutral-900);
+  padding: 9px 0;
+}
+
+
+/* ---------- Prihlaseni ---------- */
+
+.auth-splash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--color-neutral-600);
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-neutral-50);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-neutral-1000);
+  margin: 0 0 18px;
+}
+
+.login-card .btn { width: 100%; margin-top: 4px; }
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  font-size: 12.5px;
+  color: var(--color-neutral-500);
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-neutral-200);
+}
+
+.login-note {
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--color-neutral-500);
+}
+
+.logout-btn {
+  border: 1px solid var(--color-neutral-300);
+  background: var(--color-neutral-0);
+  color: var(--color-neutral-700);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.logout-btn:hover {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-600);
+  background: var(--color-primary-50);
+}
+
+
+/* ---------- Filtr katalogu opatreni ---------- */
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.chip {
+  border: 1px solid var(--color-neutral-300);
+  background: var(--color-neutral-0);
+  color: var(--color-neutral-700);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--color-primary-400); color: var(--color-primary-600); }
+.chip.is-active {
+  background: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: var(--color-neutral-0);
+}
+
+.filter-status { width: auto; }
+
+.filter-count { font-size: 13px; color: var(--color-neutral-600); margin-left: auto; }

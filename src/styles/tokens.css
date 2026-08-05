@@ -1,0 +1,55 @@
+/* Design tokens — lean subset of the gov.cz design-system Figma variables
+   (gov-design-system-b2f38df0, default mode) used by the ISMS portal. */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+  --font-sans: 'Roboto', Arial, Helvetica, sans-serif;
+
+  /* Neutral scale */
+  --color-neutral-0: rgb(255, 255, 255);
+  --color-neutral-50: rgb(246, 246, 246);
+  --color-neutral-100: rgb(231, 231, 231);
+  --color-neutral-200: rgb(209, 209, 209);
+  --color-neutral-300: rgb(176, 176, 176);
+  --color-neutral-500: rgb(109, 109, 109);
+  --color-neutral-600: rgb(93, 93, 93);
+  --color-neutral-700: rgb(79, 79, 79);
+  --color-neutral-800: rgb(69, 69, 69);
+  --color-neutral-900: rgb(59, 59, 59);
+  --color-neutral-1000: rgb(0, 0, 0);
+
+  /* Primary (gov.cz blue) */
+  --color-primary-50: rgb(243, 247, 252);
+  --color-primary-100: rgb(229, 238, 249);
+  --color-primary-200: rgb(197, 219, 242);
+  --color-primary-300: rgb(147, 189, 230);
+  --color-primary-400: rgb(89, 155, 215);
+  --color-primary-500: rgb(51, 127, 196);
+  --color-primary-600: rgb(35, 98, 162);
+  --color-primary-700: rgb(30, 80, 134);
+  --color-primary-800: rgb(29, 69, 111);
+  --color-primary-900: rgb(29, 60, 93);
+
+  /* Action colors (badges, states) */
+  --color-success-100: rgb(245, 250, 240);
+  --color-success-200: rgb(220, 239, 204);
+  --color-success-500: rgb(72, 133, 21);
+  --color-success-600: rgb(58, 98, 23);
+  --color-warning-100: rgb(254, 249, 239);
+  --color-warning-200: rgb(250, 236, 200);
+  --color-warning-500: rgb(199, 131, 0);
+  --color-warning-600: rgb(153, 98, 15);
+  --color-error-100: rgb(255, 232, 234);
+  --color-error-200: rgb(247, 205, 210);
+  --color-error-500: rgb(158, 6, 21);
+  --color-error-600: rgb(131, 7, 19);
+
+  /* Status accents used by charts / due dates (from the design composition) */
+  --status-ok: #2e7d46;
+  --status-warn: #b8860b;
+  --status-danger: #c0392b;
+
+  /* Radii */
+  --radius-s: 8px;
+  --radius-m: 16px;
+}
