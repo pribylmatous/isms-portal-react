@@ -9,6 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gov-design-system-ce/fonts": "^4.6.4",
+    "@gov-design-system-ce/icons": "^4.6.4",
+    "@gov-design-system-ce/react": "^3.4.0",
+    "@gov-design-system-ce/styles": "^4.6.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

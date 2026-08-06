@@ -205,24 +205,21 @@ button { font-family: inherit; }
 .kpi__sub { font-size: 12px; color: var(--color-neutral-500); margin-top: 4px; }
 
 /* ---------- Alerts ---------- */
+/* Box vlastní ".alert"/".alert__dot" nahrazen skutečnou <GovInfobar>
+   komponentou z @gov-design-system-ce/react. */
 
 .alerts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
 
-.alert {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-radius: var(--radius-s);
-  border: 1px solid;
-}
-.alert__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.alert__text { font-size: 14px; color: var(--color-neutral-900); }
-
-.alert--warning { background: #fdf6e3; border-color: #e8d9a0; }
-.alert--warning .alert__dot { background: var(--status-warn); }
-.alert--danger { background: #fbeaea; border-color: #eec3c3; }
-.alert--danger .alert__dot { background: var(--status-danger); }
+/* @gov-design-system-ce/react@3.4.0 vykresluje GovInfobar s atributy
+   data-color/data-type, ale @gov-design-system-ce/styles(@4.6.4)/components
+   (ověřeno i na components@4.2.9, na kterou react balíček cílí) mají
+   selektory na holé color=/type= — neshoda mezi oběma oficiálními balíčky,
+   ne věc verze. Dorovnáno ručně, ale se stejnými oficiálními proměnnými
+   jako jejich vlastní (nefunkční) pravidlo pro tuhle komponentu. */
+.gov-infobar[data-color="warning"][data-type="bold"] { background-color: var(--background-status-warning); }
+.gov-infobar[data-color="warning"][data-type="bold"] .gov-infobar__content { color: var(--text-black-fixed); }
+.gov-infobar[data-color="error"][data-type="bold"] { background-color: var(--background-status-error); }
+.gov-infobar[data-color="error"][data-type="bold"] .gov-infobar__content { color: var(--text-white-fixed); }
 
 /* ---------- Dashboard two-column ---------- */
 

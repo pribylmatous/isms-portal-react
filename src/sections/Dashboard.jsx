@@ -1,10 +1,11 @@
+import { GovInfobar } from '@gov-design-system-ce/react';
 import useApi from '../lib/useApi.js';
 import { DOMAIN_LABELS, DEADLINE_TONES, domainColor } from '../lib/status.js';
 import { isoToCz, todayCz } from '../lib/utils.js';
 import DataState from '../components/DataState.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 
-const ALERT_CLASS = { warn: 'alert--warning', danger: 'alert--danger' };
+const ALERT_COLOR = { warn: 'warning', danger: 'error' };
 
 export default function Dashboard() {
   const { data, loading, error, reload } = useApi('/api/dashboard');
@@ -60,10 +61,9 @@ export default function Dashboard() {
             {data.alerts.length > 0 && (
               <div className="alerts">
                 {data.alerts.map((a) => (
-                  <div key={a.text} className={`alert ${ALERT_CLASS[a.severity] ?? 'alert--warning'}`} role="status">
-                    <span className="alert__dot" />
-                    <span className="alert__text">{a.text}</span>
-                  </div>
+                  <GovInfobar key={a.text} color={ALERT_COLOR[a.severity] ?? 'warning'} type="bold">
+                    {a.section ? <a href={`#/${a.section}`}>{a.text}</a> : a.text}
+                  </GovInfobar>
                 ))}
               </div>
             )}
