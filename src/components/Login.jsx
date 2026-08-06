@@ -27,10 +27,13 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [localLoginEnabled, setLocalLoginEnabled] = useState(true);
   const ssoError = useSsoError();
 
   useEffect(() => {
-    get('/api/auth/config').then((c) => setSsoEnabled(c.ssoEnabled)).catch(() => setSsoEnabled(false));
+    get('/api/auth/config')
+      .then((c) => { setSsoEnabled(c.ssoEnabled); setLocalLoginEnabled(c.localLoginEnabled); })
+      .catch(() => { setSsoEnabled(false); setLocalLoginEnabled(true); });
   }, []);
 
   const submit = async (e) => {
@@ -63,23 +66,25 @@ export default function Login() {
             <Button onClick={() => { window.location.href = apiUrl('/api/auth/sso/start'); }}>
               Přihlásit se přes Microsoft
             </Button>
-            <div className="login-divider">nebo lokální účet</div>
+            {localLoginEnabled && <div className="login-divider">nebo lokální účet</div>}
           </>
         )}
-        <form className="form-grid" onSubmit={submit}>
-          <div className="field">
-            <label htmlFor="login-username">Uživatelské jméno</label>
-            <input id="login-username" name="username" className="input" required autoFocus autoComplete="username" />
-          </div>
-          <div className="field">
-            <label htmlFor="login-password">Heslo</label>
-            <input id="login-password" name="password" type="password" className="input" required autoComplete="current-password" />
-          </div>
-          {error && <div className="form-error">{error}</div>}
-          <Button type="submit" variant={ssoEnabled ? 'secondary' : 'primary'} disabled={busy}>
-            {busy ? 'Přihlašuji…' : 'Přihlásit se'}
-          </Button>
-        </form>
+        {localLoginEnabled && (
+          <form className="form-grid" onSubmit={submit}>
+            <div className="field">
+              <label htmlFor="login-username">Uživatelské jméno</label>
+              <input id="login-username" name="username" className="input" required autoFocus autoComplete="username" />
+            </div>
+            <div className="field">
+              <label htmlFor="login-password">Heslo</label>
+              <input id="login-password" name="password" type="password" className="input" required autoComplete="current-password" />
+            </div>
+            {error && <div className="form-error">{error}</div>}
+            <Button type="submit" variant={ssoEnabled ? 'secondary' : 'primary'} disabled={busy}>
+              {busy ? 'Přihlašuji…' : 'Přihlásit se'}
+            </Button>
+          </form>
+        )}
         <div className="login-note">Interní nástroj — přístup mají pouze zaměstnanci CDV.</div>
       </div>
     </div>
