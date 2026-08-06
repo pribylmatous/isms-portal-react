@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useApi from '../lib/useApi.js';
 import { post, put, del } from '../lib/api.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
@@ -9,8 +9,13 @@ import DataState from '../components/DataState.jsx';
 import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
+import ChangeDetail from './ChangeDetail.jsx';
 
-const STATUSES = ['Návrh', 'Ke schválení', 'Schváleno', 'Naplánováno', 'Realizováno', 'Uzavřeno', 'Zamítnuto'];
+// Ruční hash routing pro přímý odkaz na změnu (#/changes/CHG-01, viz App.jsx).
+const parseChangeIdFromHash = () => {
+  const m = window.location.hash.match(/^#\/changes\/([^/]+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+};
 
 export default function Changes() {
   const { user } = useAuth();
@@ -21,6 +26,16 @@ export default function Changes() {
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [selectedId, setSelectedId] = useState(parseChangeIdFromHash);
+
+  useEffect(() => {
+    const onHashChange = () => setSelectedId(parseChangeIdFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const openDetail = (id) => { window.location.hash = `/changes/${id}`; setSelectedId(id); };
+  const closeDetail = () => { window.location.hash = '/changes'; setSelectedId(null); };
 
   const editing = modal?.record ?? null;
   const openModal = (record = null) => { setFormError(null); setModal({ record }); };
@@ -34,20 +49,14 @@ export default function Changes() {
       type: fd.get('type'),
       risk_level: fd.get('risk_level'),
       owner: fd.get('owner'),
-      planned_date: fd.get('planned_date') || null,
       control_id: fd.get('control_id') || '',
       risk_id: fd.get('risk_id') || '',
     };
     setSaving(true);
     setFormError(null);
     try {
-      if (editing) {
-        await put(`/api/changes/${editing.id}`, {
-          ...payload, status: fd.get('status'), implemented_date: fd.get('implemented_date') || null,
-        });
-      } else {
-        await post('/api/changes', payload);
-      }
+      if (editing) await put(`/api/changes/${editing.id}`, payload);
+      else await post('/api/changes', { ...payload, planned_date: fd.get('planned_date') || null });
       setModal(null);
       reload();
     } catch (err) {
@@ -61,6 +70,7 @@ export default function Changes() {
     if (!window.confirm(`Opravdu smazat změnu ${c.id} – ${c.title}?`)) return;
     try {
       await del(`/api/changes/${c.id}`);
+      if (selectedId === c.id) closeDetail();
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -72,6 +82,22 @@ export default function Changes() {
     if (c.risk_id) return `Riziko: ${c.risk_id}`;
     return 'Bez vazby';
   };
+
+  if (selectedId) {
+    return (
+      <>
+        <ChangeDetail id={selectedId} onBack={closeDetail} onEdit={openModal} />
+        {modal && (
+          <Modal key={editing?.id ?? 'new'} title={`Upravit změnu ${editing.id}`} onClose={() => setModal(null)}>
+            <ChangeForm
+              editing={editing} owners={owners} controls={controls} risks={risks}
+              saving={saving} formError={formError} onSubmit={submit} onCancel={() => setModal(null)}
+            />
+          </Modal>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -94,8 +120,12 @@ export default function Changes() {
             <tbody>
               {(changes ?? []).map((c) => (
                 <tr key={c.id}>
-                  <td className="cell-id">{c.id}</td>
-                  <td>{c.title}</td>
+                  <td className="cell-id">
+                    <button type="button" className="link-cell" onClick={() => openDetail(c.id)}>{c.id}</button>
+                  </td>
+                  <td>
+                    <button type="button" className="link-cell" onClick={() => openDetail(c.id)}>{c.title}</button>
+                  </td>
                   <td className="cell-muted">{c.type}</td>
                   <td className="cell-muted">{c.risk_level}</td>
                   <td><Badge type={changeBadge(c.status)}>{c.status}</Badge></td>
@@ -118,87 +148,88 @@ export default function Changes() {
 
       {modal && (
         <Modal key={editing?.id ?? 'new'} title={editing ? `Upravit změnu ${editing.id}` : 'Nová změna'} onClose={() => setModal(null)}>
-          <form className="form-grid" onSubmit={submit}>
-            <div className="field">
-              <label htmlFor="change-title">Název změny</label>
-              <input id="change-title" name="title" className="input" required defaultValue={editing?.title ?? ''} placeholder="Např. Upgrade firewallu na verzi X" />
-            </div>
-            <div className="field">
-              <label htmlFor="change-description">Popis</label>
-              <textarea id="change-description" name="description" className="textarea" defaultValue={editing?.description ?? ''} placeholder="Nepovinné – důvod a rozsah změny" />
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="change-type">Typ změny</label>
-                <select id="change-type" name="type" className="select" defaultValue={editing?.type ?? 'Normální'}>
-                  <option>Standardní</option>
-                  <option>Normální</option>
-                  <option>Nouzová</option>
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="change-risk">Riziko změny</label>
-                <select id="change-risk" name="risk_level" className="select" defaultValue={editing?.risk_level ?? 'Nízké'}>
-                  <option>Nízké</option>
-                  <option>Střední</option>
-                  <option>Vysoké</option>
-                </select>
-              </div>
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="change-owner">Vlastník</label>
-                <select id="change-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
-                  {!editing && <option value="" disabled>Vyberte vlastníka…</option>}
-                  {editing && !(owners ?? []).includes(editing.owner) && (
-                    <option value={editing.owner}>{editing.owner}</option>
-                  )}
-                  {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="change-planned">Plánovaný termín</label>
-                <input id="change-planned" name="planned_date" type="date" className="input" defaultValue={editing?.planned_date ?? ''} />
-              </div>
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="change-control">Související opatření (nepovinné)</label>
-                <select id="change-control" name="control_id" className="select" defaultValue={editing?.control_id ?? ''}>
-                  <option value="">— žádné —</option>
-                  {(controls ?? []).map((c) => <option key={c.id} value={c.id}>{c.id} — {c.name}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="change-risklink">Související riziko (nepovinné)</label>
-                <select id="change-risklink" name="risk_id" className="select" defaultValue={editing?.risk_id ?? ''}>
-                  <option value="">— žádné —</option>
-                  {(risks ?? []).map((r) => <option key={r.id} value={r.id}>{r.id} — {r.name}</option>)}
-                </select>
-              </div>
-            </div>
-            {editing && (
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="change-status">Stav</label>
-                  <select id="change-status" name="status" className="select" defaultValue={editing.status}>
-                    {STATUSES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="change-implemented">Skutečný termín realizace</label>
-                  <input id="change-implemented" name="implemented_date" type="date" className="input" defaultValue={editing?.implemented_date ?? ''} />
-                </div>
-              </div>
-            )}
-            {formError && <div className="form-error">{formError}</div>}
-            <div className="modal__actions">
-              <Button variant="secondary" onClick={() => setModal(null)}>Zrušit</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Ukládám…' : editing ? 'Uložit změny' : 'Přidat změnu'}</Button>
-            </div>
-          </form>
+          <ChangeForm
+            editing={editing} owners={owners} controls={controls} risks={risks}
+            saving={saving} formError={formError} onSubmit={submit} onCancel={() => setModal(null)}
+          />
         </Modal>
       )}
     </>
+  );
+}
+
+// Popisná pole změny — stav/plánovaný a skutečný termín se mění jen přes akce
+// v ChangeDetail, ne odsud (viz PUT /api/changes/:id). Plánovaný termín jde
+// zadat jen při založení (jako počáteční odhad) — po založení ho nastavuje
+// akce „Naplánovat".
+function ChangeForm({ editing, owners, controls, risks, saving, formError, onSubmit, onCancel }) {
+  return (
+    <form className="form-grid" onSubmit={onSubmit}>
+      <div className="field">
+        <label htmlFor="change-title">Název změny</label>
+        <input id="change-title" name="title" className="input" required defaultValue={editing?.title ?? ''} placeholder="Např. Upgrade firewallu na verzi X" />
+      </div>
+      <div className="field">
+        <label htmlFor="change-description">Popis</label>
+        <textarea id="change-description" name="description" className="textarea" defaultValue={editing?.description ?? ''} placeholder="Nepovinné – důvod a rozsah změny" />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="change-type">Typ změny</label>
+          <select id="change-type" name="type" className="select" defaultValue={editing?.type ?? 'Normální'}>
+            <option>Standardní</option>
+            <option>Normální</option>
+            <option>Nouzová</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="change-risk">Riziko změny</label>
+          <select id="change-risk" name="risk_level" className="select" defaultValue={editing?.risk_level ?? 'Nízké'}>
+            <option>Nízké</option>
+            <option>Střední</option>
+            <option>Vysoké</option>
+          </select>
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="change-owner">Vlastník</label>
+          <select id="change-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
+            {!editing && <option value="" disabled>Vyberte vlastníka…</option>}
+            {editing && !(owners ?? []).includes(editing.owner) && (
+              <option value={editing.owner}>{editing.owner}</option>
+            )}
+            {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        {!editing && (
+          <div className="field">
+            <label htmlFor="change-planned">Plánovaný termín (odhad)</label>
+            <input id="change-planned" name="planned_date" type="date" className="input" />
+          </div>
+        )}
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="change-control">Související opatření (nepovinné)</label>
+          <select id="change-control" name="control_id" className="select" defaultValue={editing?.control_id ?? ''}>
+            <option value="">— žádné —</option>
+            {(controls ?? []).map((c) => <option key={c.id} value={c.id}>{c.id} — {c.name}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="change-risklink">Související riziko (nepovinné)</label>
+          <select id="change-risklink" name="risk_id" className="select" defaultValue={editing?.risk_id ?? ''}>
+            <option value="">— žádné —</option>
+            {(risks ?? []).map((r) => <option key={r.id} value={r.id}>{r.id} — {r.name}</option>)}
+          </select>
+        </div>
+      </div>
+      {formError && <div className="form-error">{formError}</div>}
+      <div className="modal__actions">
+        <Button variant="secondary" onClick={onCancel}>Zrušit</Button>
+        <Button type="submit" disabled={saving}>{saving ? 'Ukládám…' : editing ? 'Uložit změny' : 'Přidat změnu'}</Button>
+      </div>
+    </form>
   );
 }
