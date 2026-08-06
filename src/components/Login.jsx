@@ -3,6 +3,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { get, apiUrl } from '../lib/api.js';
 import Button from './Button.jsx';
 import LionLogo from './LionLogo.jsx';
+import PasswordField from './PasswordField.jsx';
 
 const SSO_ERRORS = {
   'no-role': 'Váš účet zatím nemá v Azure AD přiřazenou žádnou roli ISMS — požádejte administrátora o přiřazení.',
@@ -77,7 +78,7 @@ export default function Login() {
             </div>
             <div className="field">
               <label htmlFor="login-password">Heslo</label>
-              <input id="login-password" name="password" type="password" className="input" required autoComplete="current-password" />
+              <PasswordField id="login-password" name="password" required autoComplete="current-password" />
             </div>
             {error && <div className="form-error">{error}</div>}
             <Button type="submit" variant={ssoEnabled ? 'secondary' : 'primary'} disabled={busy}>
