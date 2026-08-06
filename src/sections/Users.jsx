@@ -7,6 +7,7 @@ import Button from '../components/Button.jsx';
 import DataState from '../components/DataState.jsx';
 import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import PasswordField from '../components/PasswordField.jsx';
 
 const ROLE_KEYS = ['reader', 'editor', 'manager'];
 
@@ -133,9 +134,10 @@ export default function Users() {
             </div>
             <div className="field">
               <label htmlFor="user-password">{editing ? 'Nové heslo' : 'Heslo'}</label>
-              <input
-                id="user-password" name="password" type="password" className="input" minLength={8}
+              <PasswordField
+                id="user-password" name="password" minLength={8}
                 required={!editing} placeholder={editing ? 'Ponechte prázdné pro zachování hesla' : 'Alespoň 8 znaků'}
+                autoComplete="new-password"
               />
             </div>
             {formError && <div className="form-error">{formError}</div>}
