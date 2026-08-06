@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useApi from '../lib/useApi.js';
 import { post, put, del } from '../lib/api.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
@@ -10,9 +10,15 @@ import DataState from '../components/DataState.jsx';
 import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
+import IncidentDetail from './IncidentDetail.jsx';
 
 const CATEGORIES = ['Narušení dat', 'Malware', 'Neoprávněný přístup', 'Dostupnost/výpadek', 'Phishing', 'Jiné'];
-const STATUSES = ['Nové', 'V řešení', 'Eskalováno', 'Vyřešeno', 'Uzavřeno'];
+
+// Ruční hash routing pro přímý odkaz na ticket (#/incidents/INC-01, viz App.jsx).
+const parseIncidentIdFromHash = () => {
+  const m = window.location.hash.match(/^#\/incidents\/([^/]+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+};
 
 export default function Incidents() {
   const { user } = useAuth();
@@ -23,6 +29,16 @@ export default function Incidents() {
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [selectedId, setSelectedId] = useState(parseIncidentIdFromHash);
+
+  useEffect(() => {
+    const onHashChange = () => setSelectedId(parseIncidentIdFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const openDetail = (id) => { window.location.hash = `/incidents/${id}`; setSelectedId(id); };
+  const closeDetail = () => { window.location.hash = '/incidents'; setSelectedId(null); };
 
   const editing = modal?.record ?? null;
   const openModal = (record = null) => { setFormError(null); setModal({ record }); };
@@ -44,16 +60,8 @@ export default function Incidents() {
     setSaving(true);
     setFormError(null);
     try {
-      if (editing) {
-        await put(`/api/incidents/${editing.id}`, {
-          ...payload,
-          status: fd.get('status'),
-          resolved_at: fd.get('resolved_at') || null,
-          resolution: fd.get('resolution'),
-        });
-      } else {
-        await post('/api/incidents', payload);
-      }
+      if (editing) await put(`/api/incidents/${editing.id}`, payload);
+      else await post('/api/incidents', payload);
       setModal(null);
       reload();
     } catch (err) {
@@ -67,6 +75,7 @@ export default function Incidents() {
     if (!window.confirm(`Opravdu smazat incident ${i.id} – ${i.title}?`)) return;
     try {
       await del(`/api/incidents/${i.id}`);
+      if (selectedId === i.id) closeDetail();
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -78,6 +87,22 @@ export default function Incidents() {
     if (i.risk_id) return `Riziko: ${i.risk_id}`;
     return 'Bez vazby';
   };
+
+  if (selectedId) {
+    return (
+      <>
+        <IncidentDetail id={selectedId} onBack={closeDetail} onEdit={openModal} />
+        {modal && (
+          <Modal key={editing?.id ?? 'new'} title={`Upravit incident ${editing.id}`} onClose={() => setModal(null)}>
+            <IncidentForm
+              editing={editing} owners={owners} controls={controls} risks={risks}
+              saving={saving} formError={formError} onSubmit={submit} onCancel={() => setModal(null)}
+            />
+          </Modal>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -100,8 +125,12 @@ export default function Incidents() {
             <tbody>
               {(incidents ?? []).map((i) => (
                 <tr key={i.id}>
-                  <td className="cell-id">{i.id}</td>
-                  <td>{i.title}</td>
+                  <td className="cell-id">
+                    <button type="button" className="link-cell" onClick={() => openDetail(i.id)}>{i.id}</button>
+                  </td>
+                  <td>
+                    <button type="button" className="link-cell" onClick={() => openDetail(i.id)}>{i.title}</button>
+                  </td>
                   <td className="cell-muted">{i.category}</td>
                   <td><Badge type={priorityBadge(i.priority)}>{i.priority}</Badge></td>
                   <td><Badge type={incidentBadge(i.status)}>{i.status}</Badge></td>
@@ -125,104 +154,93 @@ export default function Incidents() {
 
       {modal && (
         <Modal key={editing?.id ?? 'new'} title={editing ? `Upravit incident ${editing.id}` : 'Nový incident'} onClose={() => setModal(null)}>
-          <form className="form-grid" onSubmit={submit}>
-            <div className="field">
-              <label htmlFor="incident-title">Název incidentu</label>
-              <input id="incident-title" name="title" className="input" required defaultValue={editing?.title ?? ''} placeholder="Např. Phishingový e-mail zaměstnanci HR" />
-            </div>
-            <div className="field">
-              <label htmlFor="incident-description">Popis</label>
-              <textarea id="incident-description" name="description" className="textarea" defaultValue={editing?.description ?? ''} placeholder="Nepovinné – co se stalo, jak bylo zjištěno" />
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="incident-category">Kategorie</label>
-                <select id="incident-category" name="category" className="select" defaultValue={editing?.category ?? CATEGORIES[0]}>
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="incident-priority">Priorita</label>
-                <select id="incident-priority" name="priority" className="select" defaultValue={editing?.priority ?? 'Střední'}>
-                  <option>Nízká</option>
-                  <option>Střední</option>
-                  <option>Vysoká</option>
-                  <option>Kritická</option>
-                </select>
-              </div>
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="incident-reported">Nahlásil</label>
-                <select id="incident-reported" name="reported_by" className="select" required defaultValue={editing?.reported_by ?? ''}>
-                  {!editing && <option value="" disabled>Vyberte osobu…</option>}
-                  {editing && !(owners ?? []).includes(editing.reported_by) && (
-                    <option value={editing.reported_by}>{editing.reported_by}</option>
-                  )}
-                  {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="incident-owner">Vlastník (řeší)</label>
-                <select id="incident-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
-                  {!editing && <option value="" disabled>Vyberte vlastníka…</option>}
-                  {editing && !(owners ?? []).includes(editing.owner) && (
-                    <option value={editing.owner}>{editing.owner}</option>
-                  )}
-                  {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="incident-occurred">Datum vzniku</label>
-                <input id="incident-occurred" name="occurred_at" type="date" className="input" required defaultValue={editing?.occurred_at ?? ''} />
-              </div>
-              {editing && (
-                <div className="field">
-                  <label htmlFor="incident-resolved">Datum vyřešení</label>
-                  <input id="incident-resolved" name="resolved_at" type="date" className="input" defaultValue={editing?.resolved_at ?? ''} />
-                </div>
-              )}
-            </div>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="incident-control">Související opatření (nepovinné)</label>
-                <select id="incident-control" name="control_id" className="select" defaultValue={editing?.control_id ?? ''}>
-                  <option value="">— žádné —</option>
-                  {(controls ?? []).map((c) => <option key={c.id} value={c.id}>{c.id} — {c.name}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="incident-risklink">Související riziko (nepovinné)</label>
-                <select id="incident-risklink" name="risk_id" className="select" defaultValue={editing?.risk_id ?? ''}>
-                  <option value="">— žádné —</option>
-                  {(risks ?? []).map((r) => <option key={r.id} value={r.id}>{r.id} — {r.name}</option>)}
-                </select>
-              </div>
-            </div>
-            {editing && (
-              <>
-                <div className="field">
-                  <label htmlFor="incident-status">Stav</label>
-                  <select id="incident-status" name="status" className="select" defaultValue={editing.status}>
-                    {STATUSES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="incident-resolution">Řešení / kořenová příčina</label>
-                  <textarea id="incident-resolution" name="resolution" className="textarea" defaultValue={editing?.resolution ?? ''} placeholder="Nepovinné" />
-                </div>
-              </>
-            )}
-            {formError && <div className="form-error">{formError}</div>}
-            <div className="modal__actions">
-              <Button variant="secondary" onClick={() => setModal(null)}>Zrušit</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Ukládám…' : editing ? 'Uložit změny' : 'Přidat incident'}</Button>
-            </div>
-          </form>
+          <IncidentForm
+            editing={editing} owners={owners} controls={controls} risks={risks}
+            saving={saving} formError={formError} onSubmit={submit} onCancel={() => setModal(null)}
+          />
         </Modal>
       )}
     </>
+  );
+}
+
+// Popisná pole incidentu (název, kategorie, priorita, vazby, …) — stav se
+// mění jen přes akce v IncidentDetail, ne odsud (viz PUT /api/incidents/:id).
+function IncidentForm({ editing, owners, controls, risks, saving, formError, onSubmit, onCancel }) {
+  return (
+    <form className="form-grid" onSubmit={onSubmit}>
+      <div className="field">
+        <label htmlFor="incident-title">Název incidentu</label>
+        <input id="incident-title" name="title" className="input" required defaultValue={editing?.title ?? ''} placeholder="Např. Phishingový e-mail zaměstnanci HR" />
+      </div>
+      <div className="field">
+        <label htmlFor="incident-description">Popis</label>
+        <textarea id="incident-description" name="description" className="textarea" defaultValue={editing?.description ?? ''} placeholder="Nepovinné – co se stalo, jak bylo zjištěno" />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="incident-category">Kategorie</label>
+          <select id="incident-category" name="category" className="select" defaultValue={editing?.category ?? CATEGORIES[0]}>
+            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="incident-priority">Priorita</label>
+          <select id="incident-priority" name="priority" className="select" defaultValue={editing?.priority ?? 'Střední'}>
+            <option>Nízká</option>
+            <option>Střední</option>
+            <option>Vysoká</option>
+            <option>Kritická</option>
+          </select>
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="incident-reported">Nahlásil</label>
+          <select id="incident-reported" name="reported_by" className="select" required defaultValue={editing?.reported_by ?? ''}>
+            {!editing && <option value="" disabled>Vyberte osobu…</option>}
+            {editing && !(owners ?? []).includes(editing.reported_by) && (
+              <option value={editing.reported_by}>{editing.reported_by}</option>
+            )}
+            {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="incident-owner">Vlastník</label>
+          <select id="incident-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
+            {!editing && <option value="" disabled>Vyberte vlastníka…</option>}
+            {editing && !(owners ?? []).includes(editing.owner) && (
+              <option value={editing.owner}>{editing.owner}</option>
+            )}
+            {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="incident-occurred">Datum vzniku</label>
+        <input id="incident-occurred" name="occurred_at" type="date" className="input" required defaultValue={editing?.occurred_at ?? ''} />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="incident-control">Související opatření (nepovinné)</label>
+          <select id="incident-control" name="control_id" className="select" defaultValue={editing?.control_id ?? ''}>
+            <option value="">— žádné —</option>
+            {(controls ?? []).map((c) => <option key={c.id} value={c.id}>{c.id} — {c.name}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="incident-risklink">Související riziko (nepovinné)</label>
+          <select id="incident-risklink" name="risk_id" className="select" defaultValue={editing?.risk_id ?? ''}>
+            <option value="">— žádné —</option>
+            {(risks ?? []).map((r) => <option key={r.id} value={r.id}>{r.id} — {r.name}</option>)}
+          </select>
+        </div>
+      </div>
+      {formError && <div className="form-error">{formError}</div>}
+      <div className="modal__actions">
+        <Button variant="secondary" onClick={onCancel}>Zrušit</Button>
+        <Button type="submit" disabled={saving}>{saving ? 'Ukládám…' : editing ? 'Uložit změny' : 'Přidat incident'}</Button>
+      </div>
+    </form>
   );
 }

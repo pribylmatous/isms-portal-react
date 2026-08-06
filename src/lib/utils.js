@@ -10,9 +10,11 @@ export function todayCz() {
   return isoToCz(new Date().toISOString());
 }
 
-// '2026-08-15 14:03:27' (datetime ze SQLite) → '15.08.2026 14:03'
+// '2026-08-15T14:03:27.123Z' (new Date().toISOString(), jak appka časová razítka
+// vždy generuje) → '15.08.2026 14:03'. Rozdělovač může být 'T' i mezera (starší
+// SQLite formát), proto regex místo prostého split(' ').
 export function isoDateTimeToCz(dt) {
   if (!dt) return '';
-  const [datePart, timePart] = dt.split(' ');
+  const [datePart, timePart] = dt.split(/[T ]/);
   return `${isoToCz(datePart)} ${(timePart ?? '').slice(0, 5)}`;
 }

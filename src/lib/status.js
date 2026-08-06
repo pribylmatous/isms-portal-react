@@ -23,9 +23,10 @@ export const changeBadge = (status) =>
 
 export const incidentBadge = (status) =>
   status === 'Vyřešeno' || status === 'Uzavřeno' ? 'success'
-    : status === 'Eskalováno' ? 'alert'
+    : status === 'Eskalováno' || status === 'Pozastaveno' ? 'alert'
       : status === 'V řešení' ? 'warning'
-        : 'neutral'; // Nové
+        : status === 'Přiřazeno' ? 'default'
+          : 'neutral'; // Nové
 
 export const priorityBadge = (priority) =>
   priority === 'Kritická' ? 'alert' : priority === 'Vysoká' ? 'warning' : priority === 'Střední' ? 'default' : 'success'; // Nízká
