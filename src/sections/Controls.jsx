@@ -2,7 +2,8 @@ import { useState } from 'react';
 import useApi from '../lib/useApi.js';
 import { apiUrl, put } from '../lib/api.js';
 import { useAuth, canEdit } from '../lib/auth.jsx';
-import { statusBadge } from '../lib/status.js';
+import { statusBadge, reviewDueSeverity, DEADLINE_TONES } from '../lib/status.js';
+import { isoToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
 import Button from '../components/Button.jsx';
 import DataState from '../components/DataState.jsx';
@@ -99,22 +100,28 @@ export default function Controls() {
         <div className="card table-card">
           <table className="table">
             <colgroup>
-              <col style={{ width: 70 }} /><col /><col style={{ width: 150 }} /><col style={{ width: 170 }} /><col style={{ width: 180 }} /><col style={{ width: 60 }} />
+              <col style={{ width: 70 }} /><col /><col style={{ width: 150 }} /><col style={{ width: 170 }} /><col style={{ width: 160 }} /><col style={{ width: 150 }} /><col style={{ width: 60 }} />
             </colgroup>
             <thead>
-              <tr><th>ID</th><th>Opatření</th><th>Doména</th><th>Stav</th><th>Odpovědná osoba</th><th></th></tr>
+              <tr><th>ID</th><th>Opatření</th><th>Doména</th><th>Stav</th><th>Odpovědná osoba</th><th>Termín přezkoumání</th><th></th></tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
-                <tr key={c.id}>
-                  <td className="cell-id">{c.id}</td>
-                  <td>{c.name}</td>
-                  <td className="cell-muted">{c.domain}</td>
-                  <td><Badge type={statusBadge(c.status)}>{c.status}</Badge></td>
-                  <td className="cell-muted">{c.owner}</td>
-                  <td><RowActions onEdit={canEdit(user) ? () => { setFormError(null); setEditing(c); } : undefined} /></td>
-                </tr>
-              ))}
+              {filtered.map((c) => {
+                const dueSeverity = reviewDueSeverity(c.review_due);
+                return (
+                  <tr key={c.id} className={dueSeverity !== 'neutral' ? `row-flag row-flag--${dueSeverity}` : undefined}>
+                    <td className="cell-id">{c.id}</td>
+                    <td>{c.name}</td>
+                    <td className="cell-muted">{c.domain}</td>
+                    <td><Badge type={statusBadge(c.status)}>{c.status}</Badge></td>
+                    <td className="cell-muted">{c.owner}</td>
+                    <td style={{ color: DEADLINE_TONES[dueSeverity], fontWeight: dueSeverity !== 'neutral' ? 500 : 400 }}>
+                      {c.review_due ? isoToCz(c.review_due) : '—'}
+                    </td>
+                    <td><RowActions onEdit={canEdit(user) ? () => { setFormError(null); setEditing(c); } : undefined} /></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
