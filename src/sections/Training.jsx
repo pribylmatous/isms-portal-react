@@ -199,7 +199,7 @@ function TrainingAdminModal({ initial, onClose, onSaved }) {
           </div>
         </div>
 
-        <h2 className="section-title" style={{ marginTop: 4 }}>Otázky kvízu</h2>
+        <h2 className="section-title" style={{ marginTop: 4 }}>Otázky testu</h2>
         {questions.map((q, i) => (
           <QuestionEditor
             key={i} qIndex={i} question={q}

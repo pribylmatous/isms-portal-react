@@ -13,6 +13,7 @@ import Deadlines from './sections/Deadlines.jsx';
 import Changes from './sections/Changes.jsx';
 import Incidents from './sections/Incidents.jsx';
 import Training from './sections/Training.jsx';
+import Materials from './sections/Materials.jsx';
 import AuditLog from './sections/AuditLog.jsx';
 import Users from './sections/Users.jsx';
 
@@ -26,6 +27,7 @@ const SECTIONS = {
   changes: Changes,
   incidents: Incidents,
   training: Training,
+  materials: Materials,
   'audit-log': AuditLog,
   users: Users,
 };

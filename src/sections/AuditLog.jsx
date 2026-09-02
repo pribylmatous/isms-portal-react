@@ -12,9 +12,10 @@ const ENTITY_FILTERS = [
   ['policy', 'Dokumenty'],
   ['finding', 'Zjištění'],
   ['deadline', 'Termíny'],
+  ['material', 'Materiály'],
 ];
 
-const ENTITY_LABELS = { control: 'Opatření', risk: 'Riziko', policy: 'Dokument', finding: 'Zjištění', deadline: 'Termín' };
+const ENTITY_LABELS = { control: 'Opatření', risk: 'Riziko', policy: 'Dokument', finding: 'Zjištění', deadline: 'Termín', material: 'Materiál' };
 
 const ACTION_BADGE = { create: 'success', update: 'warning', delete: 'alert' };
 const ACTION_LABELS = { create: 'Vytvořeno', update: 'Upraveno', delete: 'Smazáno' };
@@ -24,7 +25,7 @@ const FIELD_LABELS = {
   level: 'Úroveň', owner: 'Vlastník', treatment: 'Ošetření', status: 'Stav', category: 'Kategorie',
   version: 'Verze', finding: 'Zjištění', type: 'Typ', due: 'Termín', domain: 'Doména',
   review_due: 'Termín přezkoumání', file_name: 'Soubor', file_size: 'Velikost souboru (B)', file_mime: 'Typ souboru',
-  title: 'Název', link_section: 'Odkaz na sekci',
+  title: 'Název', link_section: 'Odkaz na sekci', audience: 'Cílová skupina',
 };
 
 const fieldLabel = (key) => FIELD_LABELS[key] ?? key;
