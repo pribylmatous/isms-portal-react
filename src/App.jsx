@@ -9,6 +9,7 @@ import Controls from './sections/Controls.jsx';
 import Risks from './sections/Risks.jsx';
 import Policies from './sections/Policies.jsx';
 import Audits from './sections/Audits.jsx';
+import Deadlines from './sections/Deadlines.jsx';
 import Changes from './sections/Changes.jsx';
 import Incidents from './sections/Incidents.jsx';
 import Training from './sections/Training.jsx';
@@ -21,6 +22,7 @@ const SECTIONS = {
   risks: Risks,
   policies: Policies,
   audits: Audits,
+  deadlines: Deadlines,
   changes: Changes,
   incidents: Incidents,
   training: Training,

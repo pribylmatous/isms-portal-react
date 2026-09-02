@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useApi from '../lib/useApi.js';
 import { apiUrl, put } from '../lib/api.js';
 import { useAuth, canEdit } from '../lib/auth.jsx';
-import { statusBadge, reviewDueSeverity, DEADLINE_TONES } from '../lib/status.js';
+import { statusBadge, dateSeverity, DEADLINE_TONES } from '../lib/status.js';
 import { isoToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
 import Button from '../components/Button.jsx';
@@ -107,7 +107,7 @@ export default function Controls() {
             </thead>
             <tbody>
               {filtered.map((c) => {
-                const dueSeverity = reviewDueSeverity(c.review_due);
+                const dueSeverity = dateSeverity(c.review_due);
                 return (
                   <tr key={c.id} className={dueSeverity !== 'neutral' ? `row-flag row-flag--${dueSeverity}` : undefined}>
                     <td className="cell-id">{c.id}</td>

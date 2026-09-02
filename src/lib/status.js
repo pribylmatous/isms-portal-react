@@ -46,16 +46,17 @@ export const auditDateColor = (status) =>
       : status === 'V řešení' ? 'var(--status-warn)'
         : 'var(--color-neutral-800)';
 
-// Termín přezkoumání opatření — stejná 30denní hranice jako upozornění na
-// dashboardu (GET /api/dashboard, "review_due <= +30 dnů"), jen tady navíc
-// rozlišuje už prošlý termín (danger) od blížícího se (warn), aby šlo
-// v katalogu na první pohled poznat, o která konkrétní opatření jde.
-export const reviewDueSeverity = (reviewDue) => {
-  if (!reviewDue) return 'neutral';
+// Obecná závažnost podle blízkosti data — stejná 30denní hranice jako
+// upozornění na dashboardu (GET /api/dashboard, "review_due <= +30 dnů"):
+// už prošlý termín (danger) / blížící se do 30 dnů (warn) / ostatní (neutral).
+// Používá se pro opatření (review_due) i pro "Nejbližší termíny" (due) —
+// severity se nikde neukládá, počítá se vždy naživo z data.
+export const dateSeverity = (date) => {
+  if (!date) return 'neutral';
   const today = new Date().toISOString().slice(0, 10);
-  if (reviewDue < today) return 'danger';
+  if (date < today) return 'danger';
   const in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-  return reviewDue <= in30 ? 'warn' : 'neutral';
+  return date <= in30 ? 'warn' : 'neutral';
 };
 
 // Pořadí a popisky domén přílohy A pro dashboard

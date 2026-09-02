@@ -1,6 +1,6 @@
 import { GovInfobar } from '@gov-design-system-ce/react';
 import useApi from '../lib/useApi.js';
-import { DOMAIN_LABELS, DEADLINE_TONES, domainColor } from '../lib/status.js';
+import { DOMAIN_LABELS, DEADLINE_TONES, dateSeverity, domainColor } from '../lib/status.js';
 import { isoToCz, todayCz } from '../lib/utils.js';
 import DataState from '../components/DataState.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
@@ -88,19 +88,25 @@ export default function Dashboard() {
                 </div>
               </section>
               <section>
-                <h2 className="section-title">Nejbližší termíny</h2>
+                <div className="progress__head">
+                  <h2 className="section-title">Nejbližší termíny</h2>
+                  <a href="#/deadlines">Spravovat termíny</a>
+                </div>
                 <div className="card deadlines">
                   {data.deadlines.map((dl) => (
                     <div key={dl.id} className="deadline">
                       <div>
-                        <div className="deadline__title">{dl.title}</div>
+                        <div className="deadline__title">
+                          {dl.link_section ? <a href={`#/${dl.link_section}`}>{dl.title}</a> : dl.title}
+                        </div>
                         <div className="deadline__owner">{dl.owner}</div>
                       </div>
-                      <div className="deadline__date" style={{ color: DEADLINE_TONES[dl.severity] }}>
+                      <div className="deadline__date" style={{ color: DEADLINE_TONES[dateSeverity(dl.due)] }}>
                         {isoToCz(dl.due)}
                       </div>
                     </div>
                   ))}
+                  {data.deadlines.length === 0 && <div className="deadline__owner">Žádné nadcházející termíny.</div>}
                 </div>
               </section>
             </div>

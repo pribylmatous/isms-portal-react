@@ -6,6 +6,7 @@ export const NAV_ITEMS = [
   { id: 'risks', label: 'Registr rizik' },
   { id: 'policies', label: 'Knihovna dokumentů' },
   { id: 'audits', label: 'Audity a nápravná opatření' },
+  { id: 'deadlines', label: 'Nejbližší termíny' },
   { id: 'changes', label: 'Řízení změn' },
   { id: 'incidents', label: 'Řízení incidentů' },
   { id: 'training', label: 'Školení a povědomí' },
