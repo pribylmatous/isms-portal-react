@@ -96,6 +96,30 @@ frontendu musí běžet API server (`cd ../isms-api && npm run dev`).
 
 Stavy načítání a chyb řeší komponenta `DataState` (s tlačítkem „Zkusit znovu").
 
+## Produkční build a hosting
+
+```
+npm run build
+```
+
+vytvoří statický build do `dist/`. `.env.production` nastavuje `VITE_API_URL=`
+(prázdné) — v produkci se počítá s tím, že frontend i API běží za stejným
+originem přes reverse proxy (viz níže), takže požadavky jdou na relativní
+`/api/...` a CORS se v prohlížeči vůbec neřeší.
+
+Frontend používá ruční hash routing (`#/dashboard`, `#/incidents/...`) — hash
+se prohlížečem na server nikdy neposílá, takže žádný web server nepotřebuje
+SPA fallback rewrite pro klientské cesty, jen servírovat `dist/` staticky
+a proxovat `/api/` na `isms-api` (výchozí port 3001).
+
+Hotové konfigurace pro obě běžné varianty v `deploy/`:
+- `deploy/nginx.conf` — Nginx server blok
+- `deploy/web.config` — IIS (vyžaduje moduly URL Rewrite + Application
+  Request Routing, viz komentář v souboru)
+
+Obě jen servírují `dist/` a proxují `/api/*` na backend — vyber podle toho,
+jaký web server bude produkční server skutečně mít.
+
 ## Poznámky
 
 - Komponenty Badge/Button/Accordion jsou napsané ručně nad tokeny podkladového
