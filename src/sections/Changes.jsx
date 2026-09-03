@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post, put, del } from '../lib/api.js';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
+import usePeople from '../lib/usePeople.js';
 import { changeBadge } from '../lib/status.js';
 import Badge from '../components/Badge.jsx';
 import Button from '../components/Button.jsx';
@@ -11,6 +12,14 @@ import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
 import ChangeDetail from './ChangeDetail.jsx';
 
+const mapRow = (r) => ({
+  id: r.$id, title: r.title, description: r.description, type: r.type, risk_level: r.risk_level,
+  status: r.status, owner: r.owner, planned_date: r.planned_date, implemented_date: r.implemented_date,
+  control_id: r.control_id, risk_id: r.risk_id, assigned_to_user_id: r.assigned_to_user_id, assigned_to_name: r.assigned_to_name,
+});
+const mapControl = (r) => ({ id: r.$id, name: r.name });
+const mapRisk = (r) => ({ id: r.$id, name: r.name });
+
 // Ruční hash routing pro přímý odkaz na změnu (#/changes/CHG-01, viz App.jsx).
 const parseChangeIdFromHash = () => {
   const m = window.location.hash.match(/^#\/changes\/([^/]+)$/);
@@ -19,10 +28,10 @@ const parseChangeIdFromHash = () => {
 
 export default function Changes() {
   const { user } = useAuth();
-  const { data: changes, loading, error, reload } = useApi('/api/changes');
-  const { data: owners } = useApi('/api/changes/owners');
-  const { data: controls } = useApi('/api/controls');
-  const { data: risks } = useApi('/api/risks');
+  const { rows: changes, loading, error, reload } = useTable('changes', { mapRow });
+  const { rows: controls } = useTable('controls', { mapRow: mapControl });
+  const { rows: risks } = useTable('risks', { mapRow: mapRisk });
+  const { names: owners } = usePeople();
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -55,8 +64,8 @@ export default function Changes() {
     setSaving(true);
     setFormError(null);
     try {
-      if (editing) await put(`/api/changes/${editing.id}`, payload);
-      else await post('/api/changes', { ...payload, planned_date: fd.get('planned_date') || null });
+      if (editing) await callFn('tickets-fn', `/changes/${editing.id}`, 'PUT', payload);
+      else await callFn('tickets-fn', '/changes', 'POST', { ...payload, planned_date: fd.get('planned_date') || null });
       setModal(null);
       reload();
     } catch (err) {
@@ -69,7 +78,7 @@ export default function Changes() {
   const remove = async (c) => {
     if (!window.confirm(`Opravdu smazat změnu ${c.id} – ${c.title}?`)) return;
     try {
-      await del(`/api/changes/${c.id}`);
+      await callFn('tickets-fn', `/changes/${c.id}`, 'DELETE');
       if (selectedId === c.id) closeDetail();
       reload();
     } catch (err) {
@@ -159,9 +168,8 @@ export default function Changes() {
 }
 
 // Popisná pole změny — stav/plánovaný a skutečný termín se mění jen přes akce
-// v ChangeDetail, ne odsud (viz PUT /api/changes/:id). Plánovaný termín jde
-// zadat jen při založení (jako počáteční odhad) — po založení ho nastavuje
-// akce „Naplánovat".
+// v ChangeDetail, ne odsud. Plánovaný termín jde zadat jen při založení (jako
+// počáteční odhad) — po založení ho nastavuje akce „Naplánovat".
 function ChangeForm({ editing, owners, controls, risks, saving, formError, onSubmit, onCancel }) {
   return (
     <form className="form-grid" onSubmit={onSubmit}>

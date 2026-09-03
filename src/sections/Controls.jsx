@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { apiUrl, put } from '../lib/api.js';
+import useTable from '../lib/useTable.js';
+import { tablesDB, APPWRITE_DATABASE_ID } from '../lib/appwrite.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit } from '../lib/auth.jsx';
+import usePeople from '../lib/usePeople.js';
 import { statusBadge, dateSeverity, DEADLINE_TONES } from '../lib/status.js';
 import { isoToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
@@ -11,14 +13,21 @@ import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
 
-// Stažení SoA exportu ze serveru (CSV generuje API)
-const downloadSoA = () => {
+const mapRow = (r) => ({ id: r.$id, name: r.name, domain: r.domain, status: r.status, owner: r.owner, review_due: r.review_due ? r.review_due.slice(0, 10) : null });
+
+const downloadSoA = async () => {
+  const { filename, contentBase64 } = await callFn('registries-fn', '/controls/export.xlsx', 'GET');
+  const binary = atob(contentBase64);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = apiUrl('/api/controls/export.xlsx');
-  a.download = '';
+  a.href = url;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
+  URL.revokeObjectURL(url);
 };
 
 const DOMAIN_FILTERS = [
@@ -33,8 +42,8 @@ const STATUS_FILTERS = ['Vše', 'Zavedeno', 'Částečně zavedeno', 'Chybí'];
 
 export default function Controls() {
   const { user } = useAuth();
-  const { data: controls, loading, error, reload } = useApi('/api/controls');
-  const { data: owners } = useApi('/api/controls/owners');
+  const { names: OWNERS } = usePeople();
+  const { rows: controls, loading, error, reload } = useTable('controls', { mapRow });
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -51,10 +60,14 @@ export default function Controls() {
     setSaving(true);
     setFormError(null);
     try {
-      await put(`/api/controls/${editing.id}`, {
-        status: fd.get('status'),
-        owner: fd.get('owner'),
-        review_due: fd.get('review_due') || null,
+      const reviewDue = fd.get('review_due');
+      await tablesDB.updateRow({
+        databaseId: APPWRITE_DATABASE_ID, tableId: 'controls', rowId: editing.id,
+        data: {
+          status: fd.get('status'), owner: fd.get('owner'),
+          review_due: reviewDue ? new Date(`${reviewDue}T00:00:00.000Z`).toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
       });
       setEditing(null);
       reload();
@@ -146,10 +159,10 @@ export default function Controls() {
               <div className="field">
                 <label htmlFor="control-owner">Odpovědná osoba</label>
                 <select id="control-owner" name="owner" className="select" required defaultValue={editing.owner}>
-                  {!(owners ?? []).includes(editing.owner) && (
+                  {!OWNERS.includes(editing.owner) && (
                     <option value={editing.owner}>{editing.owner}</option>
                   )}
-                  {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                  {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div className="field">

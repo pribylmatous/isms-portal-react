@@ -1,41 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../lib/auth.jsx';
-import { get, apiUrl } from '../lib/api.js';
 import Button from './Button.jsx';
 import LionLogo from './LionLogo.jsx';
 import PasswordField from './PasswordField.jsx';
-
-const SSO_ERRORS = {
-  'no-role': 'Váš účet zatím nemá v Azure AD přiřazenou žádnou roli ISMS — požádejte administrátora o přiřazení.',
-  'inactive': 'Tento účet je deaktivovaný. Obraťte se na správce portálu.',
-  'start-failed': 'Přihlášení přes Microsoft se nepodařilo spustit. Zkuste to prosím znovu.',
-  'callback-failed': 'Přihlášení přes Microsoft se nezdařilo. Zkuste to prosím znovu.',
-};
-
-function useSsoError() {
-  const [code] = useState(() => new URLSearchParams(window.location.search).get('ssoError'));
-  useEffect(() => {
-    if (!code) return;
-    const url = new URL(window.location.href);
-    url.searchParams.delete('ssoError');
-    window.history.replaceState({}, '', url);
-  }, [code]);
-  return code ? (SSO_ERRORS[code] ?? 'Přihlášení přes Microsoft se nezdařilo.') : null;
-}
 
 export default function Login() {
   const { login } = useAuth();
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [ssoEnabled, setSsoEnabled] = useState(false);
-  const [localLoginEnabled, setLocalLoginEnabled] = useState(true);
-  const ssoError = useSsoError();
-
-  useEffect(() => {
-    get('/api/auth/config')
-      .then((c) => { setSsoEnabled(c.ssoEnabled); setLocalLoginEnabled(c.localLoginEnabled); })
-      .catch(() => { setSsoEnabled(false); setLocalLoginEnabled(true); });
-  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -43,7 +15,7 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      await login(fd.get('username'), fd.get('password'));
+      await login(fd.get('email'), fd.get('password'));
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -61,31 +33,18 @@ export default function Login() {
           </div>
         </div>
         <h1 className="login-title">Přihlášení</h1>
-        {ssoError && <div className="form-error">{ssoError}</div>}
-        {ssoEnabled && (
-          <>
-            <Button onClick={() => { window.location.href = apiUrl('/api/auth/sso/start'); }}>
-              Přihlásit se přes Microsoft
-            </Button>
-            {localLoginEnabled && <div className="login-divider">nebo lokální účet</div>}
-          </>
-        )}
-        {localLoginEnabled && (
-          <form className="form-grid" onSubmit={submit}>
-            <div className="field">
-              <label htmlFor="login-username">Uživatelské jméno</label>
-              <input id="login-username" name="username" className="input" required autoFocus autoComplete="username" />
-            </div>
-            <div className="field">
-              <label htmlFor="login-password">Heslo</label>
-              <PasswordField id="login-password" name="password" required autoComplete="current-password" />
-            </div>
-            {error && <div className="form-error">{error}</div>}
-            <Button type="submit" variant={ssoEnabled ? 'secondary' : 'primary'} disabled={busy}>
-              {busy ? 'Přihlašuji…' : 'Přihlásit se'}
-            </Button>
-          </form>
-        )}
+        <form className="form-grid" onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="login-email">E-mail</label>
+            <input id="login-email" name="email" type="email" className="input" required autoFocus autoComplete="username" />
+          </div>
+          <div className="field">
+            <label htmlFor="login-password">Heslo</label>
+            <PasswordField id="login-password" name="password" required autoComplete="current-password" />
+          </div>
+          {error && <div className="form-error">{error}</div>}
+          <Button type="submit" disabled={busy}>{busy ? 'Přihlašuji…' : 'Přihlásit se'}</Button>
+        </form>
         <div className="login-note">Interní nástroj — přístup mají pouze zaměstnanci CDV.</div>
       </div>
     </div>

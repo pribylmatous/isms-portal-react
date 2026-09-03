@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post, put, del } from '../lib/api.js';
+import useFn from '../lib/useFn.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
 import { dateSeverity } from '../lib/status.js';
 import { isoToCz } from '../lib/utils.js';
@@ -14,14 +14,14 @@ import RowActions from '../components/RowActions.jsx';
 
 const SEVERITY_BADGE = { danger: 'alert', warn: 'warning', neutral: 'neutral' };
 
-// Sekce portálu, na které lze termín navázat (viz LINKABLE_SECTIONS v routes.js) —
-// odvozeno ze stejného seznamu jako navigace, aby popisky nikdy nerozjely.
+// Sekce portálu, na které lze termín navázat — odvozeno ze stejného seznamu
+// jako navigace, aby popisky nikdy nerozjely.
 const LINK_SECTIONS = NAV_ITEMS.filter((item) => item.id !== 'dashboard' && item.id !== 'deadlines');
 const linkLabel = (id) => LINK_SECTIONS.find((s) => s.id === id)?.label ?? id;
 
 export default function Deadlines() {
   const { user } = useAuth();
-  const { data: deadlines, loading, error, reload } = useApi('/api/deadlines');
+  const { data: deadlines, loading, error, reload } = useFn('registries-fn', '/deadlines');
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -42,9 +42,9 @@ export default function Deadlines() {
     setFormError(null);
     try {
       if (editing) {
-        await put(`/api/deadlines/${editing.id}`, payload);
+        await callFn('registries-fn', `/deadlines/${editing.id}`, 'PUT', payload);
       } else {
-        await post('/api/deadlines', payload);
+        await callFn('registries-fn', '/deadlines', 'POST', payload);
       }
       setModal(null);
       reload();
@@ -58,7 +58,7 @@ export default function Deadlines() {
   const remove = async (d) => {
     if (!window.confirm(`Opravdu smazat termín „${d.title}"?`)) return;
     try {
-      await del(`/api/deadlines/${d.id}`);
+      await callFn('registries-fn', `/deadlines/${d.id}`, 'DELETE');
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -96,7 +96,7 @@ export default function Deadlines() {
                     <td>
                       {d.source === 'manual' ? (
                         <RowActions
-                          onEdit={canEdit(user) ? () => openModal(d) : undefined}
+                          onEdit={canEdit(user) ? () => openModal({ ...d, due: d.due?.slice(0, 10) }) : undefined}
                           onDelete={canDelete(user) ? () => remove(d) : undefined}
                         />
                       ) : (

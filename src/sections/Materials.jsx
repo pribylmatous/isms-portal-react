@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { apiUrl, get, post, put, del } from '../lib/api.js';
+import { ID } from 'appwrite';
+import useFn from '../lib/useFn.js';
+import { callFn } from '../lib/fn.js';
+import { storage, APPWRITE_DOCUMENTS_BUCKET_ID } from '../lib/appwrite.js';
 import { useAuth, isManager, ROLE_LABELS } from '../lib/auth.jsx';
 import { trainingColor } from '../lib/status.js';
 import { isoToCz, isoDateTimeToCz } from '../lib/utils.js';
@@ -43,15 +45,19 @@ function MaterialAdminModal({ initial, onClose, onSaved }) {
     setSaving(true);
     setError(null);
     try {
-      const fd = new FormData();
-      fd.append('name', name);
-      fd.append('due', due);
-      if (description.trim()) fd.append('description', description.trim());
-      targetRoles.forEach((r) => fd.append('target_roles', r));
       const file = fileRef.current?.files?.[0];
-      if (file) fd.append('file', file);
-      if (editing) await put(`/api/study-materials/${initial.id}`, fd);
-      else await post('/api/study-materials', fd);
+      let fileMeta = {};
+      if (file) {
+        const uploaded = await storage.createFile({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId: ID.unique(), file });
+        fileMeta = { file_id: uploaded.$id, file_name: file.name, file_size: uploaded.sizeOriginal, file_mime: uploaded.mimeType };
+      }
+      const payload = { name, description, target_roles: targetRoles, due, ...fileMeta };
+      const previousFileId = editing ? initial.fileId : null;
+      if (editing) await callFn('registries-fn', `/study-materials/${initial.id}`, 'PUT', payload);
+      else await callFn('registries-fn', '/study-materials', 'POST', payload);
+      if (fileMeta.file_id && previousFileId) {
+        storage.deleteFile({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId: previousFileId }).catch(() => {});
+      }
       onSaved();
       onClose();
     } catch (err) {
@@ -80,7 +86,7 @@ function MaterialAdminModal({ initial, onClose, onSaved }) {
           <input id="mat-file" ref={fileRef} name="file" type="file" className="input" accept=".pdf,.doc,.docx,.odt" />
           <div className="form-hint">
             {editing && initial.fileName && (
-              <>Aktuální soubor: <a href={apiUrl(`/api/study-materials/${initial.id}/file`)} target="_blank" rel="noreferrer">{initial.fileName}</a>. Nová volba ho nahradí. </>
+              <>Aktuální soubor: {initial.fileName}. Nová volba ho nahradí. </>
             )}
             Povolené formáty: PDF, DOC, DOCX, ODT (max 20 MB). Bez souboru stačí popis/odkaz výše.
           </div>
@@ -116,7 +122,7 @@ function ReadsModal({ material, onClose }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    get(`/api/study-materials/${material.id}/reads`).then(setRows).catch((err) => setError(err.message));
+    callFn('registries-fn', `/study-materials/${material.id}/reads`, 'GET').then(setRows).catch((err) => setError(err.message));
   }, [material.id]);
 
   return (
@@ -149,14 +155,14 @@ function ReadsModal({ material, onClose }) {
 export default function Materials() {
   const { user } = useAuth();
   const manager = isManager(user);
-  const materials = useApi('/api/study-materials');
+  const materials = useFn('registries-fn', '/study-materials');
   const [adminModal, setAdminModal] = useState(null); // null | { initial: null | fullRecord }
   const [readsMaterial, setReadsMaterial] = useState(null); // null | material
   const [marking, setMarking] = useState(null); // id materiálu, který se právě označuje jako přečtený
 
   const openEdit = async (m) => {
     try {
-      const full = await get(`/api/study-materials/${m.id}`);
+      const full = await callFn('registries-fn', `/study-materials/${m.id}`, 'GET');
       setAdminModal({ initial: full });
     } catch (err) {
       window.alert(`Nepodařilo se načíst materiál: ${err.message}`);
@@ -166,7 +172,8 @@ export default function Materials() {
   const remove = async (m) => {
     if (!window.confirm(`Opravdu smazat materiál „${m.name}"? Smažou se i záznamy o přečtení.`)) return;
     try {
-      await del(`/api/study-materials/${m.id}`);
+      const result = await callFn('registries-fn', `/study-materials/${m.id}`, 'DELETE');
+      if (result?.file_id) storage.deleteFile({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId: result.file_id }).catch(() => {});
       materials.reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -176,7 +183,7 @@ export default function Materials() {
   const markRead = async (m) => {
     setMarking(m.id);
     try {
-      await post(`/api/study-materials/${m.id}/read`, {});
+      await callFn('registries-fn', `/study-materials/${m.id}/read`, 'POST');
       materials.reload();
     } catch (err) {
       window.alert(`Nepodařilo se označit jako přečtené: ${err.message}`);
@@ -184,6 +191,8 @@ export default function Materials() {
       setMarking(null);
     }
   };
+
+  const fileUrl = (fileId) => storage.getFileDownload({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId });
 
   return (
     <>
@@ -205,7 +214,7 @@ export default function Materials() {
                 {m.description && <div className="training__meta">{m.description}</div>}
                 <div className="training__meta">
                   {m.fileName
-                    ? <a href={apiUrl(`/api/study-materials/${m.id}/file`)} target="_blank" rel="noreferrer">{m.fileName}</a>
+                    ? <a href={fileUrl(m.fileId)} target="_blank" rel="noreferrer">{m.fileName}</a>
                     : <span className="cell-muted">Bez přiloženého souboru</span>}
                   {m.fileSize != null && <> &middot; {formatSize(m.fileSize)}</>}
                 </div>

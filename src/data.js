@@ -1,4 +1,4 @@
-// Statická konfigurace UI. Veškerá data ISMS poskytuje API (viz lib/api.js).
+// Statická konfigurace UI. Veškerá data ISMS poskytuje Appwrite (viz lib/appwrite.js).
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Přehled' },

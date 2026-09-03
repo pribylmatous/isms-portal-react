@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { apiUrl, post, put, del } from '../lib/api.js';
+import { ID } from 'appwrite';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
+import { storage, APPWRITE_DOCUMENTS_BUCKET_ID } from '../lib/appwrite.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
+import usePeople from '../lib/usePeople.js';
 import { policyBadge } from '../lib/status.js';
 import { isoToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
@@ -11,6 +14,8 @@ import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
 
+const mapRow = (r) => ({ id: r.$id, name: r.name, category: r.category, version: r.version, owner: r.owner, status: r.status, updated_at: r.updated_at, file_name: r.file_name, file_id: r.file_id, file_size: r.file_size, file_mime: r.file_mime });
+
 const formatSize = (bytes) => {
   if (bytes == null) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -19,8 +24,8 @@ const formatSize = (bytes) => {
 
 export default function Policies() {
   const { user } = useAuth();
-  const { data: policies, loading, error, reload } = useApi('/api/policies');
-  const { data: owners } = useApi('/api/policies/owners');
+  const { names: OWNERS } = usePeople();
+  const { rows: policies, loading, error, reload } = useTable('policies', { orderBy: 'name', mapRow });
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -42,10 +47,21 @@ export default function Policies() {
     setSaving(true);
     setFormError(null);
     try {
+      const file = fd.get('file');
+      let fileMeta = {};
+      if (file && file.size > 0) {
+        const uploaded = await storage.createFile({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId: ID.unique(), file });
+        fileMeta = { file_id: uploaded.$id, file_name: file.name, file_size: uploaded.sizeOriginal, file_mime: uploaded.mimeType };
+      }
+      const payload = { name: fd.get('name'), category: fd.get('category'), owner: fd.get('owner'), ...fileMeta };
+      const previousFileId = editing?.file_id;
       if (editing) {
-        await put(`/api/policies/${editing.id}`, fd);
+        await callFn('registries-fn', `/policies/${editing.id}`, 'PUT', { ...payload, version: fd.get('version'), status: fd.get('status') });
       } else {
-        await post('/api/policies', fd);
+        await callFn('registries-fn', '/policies', 'POST', { ...payload, version: '1.0' });
+      }
+      if (fileMeta.file_id && previousFileId) {
+        storage.deleteFile({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId: previousFileId }).catch(() => {});
       }
       setModal(null);
       reload();
@@ -59,12 +75,15 @@ export default function Policies() {
   const remove = async (p) => {
     if (!window.confirm(`Opravdu smazat dokument „${p.name}"?`)) return;
     try {
-      await del(`/api/policies/${p.id}`);
+      const result = await callFn('registries-fn', `/policies/${p.id}`, 'DELETE');
+      if (result?.file_id) storage.deleteFile({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId: result.file_id }).catch(() => {});
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
     }
   };
+
+  const fileUrl = (fileId) => storage.getFileDownload({ bucketId: APPWRITE_DOCUMENTS_BUCKET_ID, fileId });
 
   return (
     <>
@@ -84,7 +103,7 @@ export default function Policies() {
               <div className="policy__meta">Vlastník: {p.owner}</div>
               <div className="policy__meta">
                 {p.file_name
-                  ? <a href={apiUrl(`/api/policies/${p.id}/file`)} target="_blank" rel="noreferrer">{p.file_name}</a>
+                  ? <a href={fileUrl(p.file_id)} target="_blank" rel="noreferrer">{p.file_name}</a>
                   : <span className="cell-muted">Bez přiloženého souboru</span>}
                 {p.file_size != null && <> &middot; {formatSize(p.file_size)}</>}
               </div>
@@ -110,7 +129,7 @@ export default function Policies() {
                 accept=".pdf,.doc,.docx,.odt" required={!editing} onChange={onFilePicked}
               />
               <div className="form-hint">
-                {editing && editing.file_name && <>Aktuální soubor: <a href={apiUrl(`/api/policies/${editing.id}/file`)} target="_blank" rel="noreferrer">{editing.file_name}</a>. Nová volba ho nahradí. </>}
+                {editing && editing.file_name && <>Aktuální soubor: <a href={fileUrl(editing.file_id)} target="_blank" rel="noreferrer">{editing.file_name}</a>. Nová volba ho nahradí. </>}
                 Povolené formáty: PDF, DOC, DOCX, ODT (max 20 MB).
               </div>
             </div>
@@ -131,10 +150,10 @@ export default function Policies() {
                 <label htmlFor="policy-owner">Vlastník</label>
                 <select id="policy-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
                   {!editing && <option value="" disabled>Vyberte vlastníka…</option>}
-                  {editing && !(owners ?? []).includes(editing.owner) && (
+                  {editing && !OWNERS.includes(editing.owner) && (
                     <option value={editing.owner}>{editing.owner}</option>
                   )}
-                  {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                  {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
             </div>

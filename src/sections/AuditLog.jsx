@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import useApi from '../lib/useApi.js';
+import useFn from '../lib/useFn.js';
 import { isoDateTimeToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
 import DataState from '../components/DataState.jsx';
@@ -33,8 +33,9 @@ const fieldValue = (v) => (v === null || v === '' ? '—' : String(v));
 
 export default function AuditLog() {
   const [filter, setFilter] = useState('all');
-  const { data: entries, loading, error, reload } = useApi(
-    '/api/audit-log' + (filter === 'all' ? '' : `?entity=${filter}`),
+  const { data: entries, loading, error, reload } = useFn(
+    'registries-fn',
+    '/audit-log' + (filter === 'all' ? '' : `?entity=${filter}`),
   );
 
   return (

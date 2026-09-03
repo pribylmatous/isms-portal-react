@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post, put, del } from '../lib/api.js';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
+import usePeople from '../lib/usePeople.js';
 import { incidentBadge, priorityBadge } from '../lib/status.js';
 import { isoToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
@@ -14,6 +15,15 @@ import IncidentDetail from './IncidentDetail.jsx';
 
 const CATEGORIES = ['Narušení dat', 'Malware', 'Neoprávněný přístup', 'Dostupnost/výpadek', 'Phishing', 'Jiné'];
 
+const mapRow = (r) => ({
+  id: r.$id, title: r.title, description: r.description, category: r.category, priority: r.priority,
+  status: r.status, reported_by: r.reported_by, owner: r.owner, occurred_at: r.occurred_at ? r.occurred_at.slice(0, 10) : r.occurred_at,
+  resolved_at: r.resolved_at, resolution: r.resolution, control_id: r.control_id, risk_id: r.risk_id,
+  assigned_to_user_id: r.assigned_to_user_id, assigned_to_name: r.assigned_to_name,
+});
+const mapControl = (r) => ({ id: r.$id, name: r.name });
+const mapRisk = (r) => ({ id: r.$id, name: r.name });
+
 // Ruční hash routing pro přímý odkaz na ticket (#/incidents/INC-01, viz App.jsx).
 const parseIncidentIdFromHash = () => {
   const m = window.location.hash.match(/^#\/incidents\/([^/]+)$/);
@@ -22,10 +32,10 @@ const parseIncidentIdFromHash = () => {
 
 export default function Incidents() {
   const { user } = useAuth();
-  const { data: incidents, loading, error, reload } = useApi('/api/incidents');
-  const { data: owners } = useApi('/api/incidents/owners');
-  const { data: controls } = useApi('/api/controls');
-  const { data: risks } = useApi('/api/risks');
+  const { rows: incidents, loading, error, reload } = useTable('incidents', { mapRow });
+  const { rows: controls } = useTable('controls', { mapRow: mapControl });
+  const { rows: risks } = useTable('risks', { mapRow: mapRisk });
+  const { names: owners } = usePeople();
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -60,8 +70,8 @@ export default function Incidents() {
     setSaving(true);
     setFormError(null);
     try {
-      if (editing) await put(`/api/incidents/${editing.id}`, payload);
-      else await post('/api/incidents', payload);
+      if (editing) await callFn('tickets-fn', `/incidents/${editing.id}`, 'PUT', payload);
+      else await callFn('tickets-fn', '/incidents', 'POST', payload);
       setModal(null);
       reload();
     } catch (err) {
@@ -74,7 +84,7 @@ export default function Incidents() {
   const remove = async (i) => {
     if (!window.confirm(`Opravdu smazat incident ${i.id} – ${i.title}?`)) return;
     try {
-      await del(`/api/incidents/${i.id}`);
+      await callFn('tickets-fn', `/incidents/${i.id}`, 'DELETE');
       if (selectedId === i.id) closeDetail();
       reload();
     } catch (err) {
@@ -165,7 +175,7 @@ export default function Incidents() {
 }
 
 // Popisná pole incidentu (název, kategorie, priorita, vazby, …) — stav se
-// mění jen přes akce v IncidentDetail, ne odsud (viz PUT /api/incidents/:id).
+// mění jen přes akce v IncidentDetail, ne odsud.
 function IncidentForm({ editing, owners, controls, risks, saving, formError, onSubmit, onCancel }) {
   return (
     <form className="form-grid" onSubmit={onSubmit}>

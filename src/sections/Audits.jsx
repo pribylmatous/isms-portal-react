@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post, put, del } from '../lib/api.js';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
+import usePeople from '../lib/usePeople.js';
 import { auditBadge, auditDateColor } from '../lib/status.js';
 import { isoToCz } from '../lib/utils.js';
 import Badge from '../components/Badge.jsx';
@@ -11,10 +12,12 @@ import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
 
+const mapRow = (r) => ({ id: r.$id, finding: r.finding, type: r.type, status: r.status, due: r.due ? r.due.slice(0, 10) : r.due, owner: r.owner });
+
 export default function Audits() {
   const { user } = useAuth();
-  const { data: findings, loading, error, reload } = useApi('/api/findings');
-  const { data: owners } = useApi('/api/findings/owners');
+  const { names: OWNERS } = usePeople();
+  const { rows: findings, loading, error, reload } = useTable('audit_findings', { mapRow });
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -35,9 +38,9 @@ export default function Audits() {
     setFormError(null);
     try {
       if (editing) {
-        await put(`/api/findings/${editing.id}`, { ...payload, status: fd.get('status') });
+        await callFn('registries-fn', `/findings/${editing.id}`, 'PUT', { ...payload, status: fd.get('status') });
       } else {
-        await post('/api/findings', payload);
+        await callFn('registries-fn', '/findings', 'POST', payload);
       }
       setModal(null);
       reload();
@@ -51,7 +54,7 @@ export default function Audits() {
   const remove = async (f) => {
     if (!window.confirm(`Opravdu smazat zjištění ${f.id}?`)) return;
     try {
-      await del(`/api/findings/${f.id}`);
+      await callFn('registries-fn', `/findings/${f.id}`, 'DELETE');
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -122,10 +125,10 @@ export default function Audits() {
               <label htmlFor="audit-owner">Odpovědná osoba</label>
               <select id="audit-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
                 {!editing && <option value="" disabled>Vyberte odpovědnou osobu…</option>}
-                {editing && !(owners ?? []).includes(editing.owner) && (
+                {editing && !OWNERS.includes(editing.owner) && (
                   <option value={editing.owner}>{editing.owner}</option>
                 )}
-                {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             {editing && (

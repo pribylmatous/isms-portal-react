@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post, put, del } from '../lib/api.js';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit, canDelete } from '../lib/auth.jsx';
+import usePeople from '../lib/usePeople.js';
 import { riskBadge, riskColor } from '../lib/status.js';
 import Badge from '../components/Badge.jsx';
 import Button from '../components/Button.jsx';
@@ -9,6 +10,8 @@ import DataState from '../components/DataState.jsx';
 import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
+
+const mapRow = (r) => ({ id: r.$id, name: r.name, asset: r.asset, probability: r.probability, impact: r.impact, score: r.score, level: r.level, owner: r.owner, treatment: r.treatment, status: r.status });
 
 // U seedovaných rizik známe jen skóre — pro předvyplnění formuláře
 // ho rozložíme na pravděpodobnost × dopad (1–4)
@@ -21,8 +24,8 @@ const splitScore = (score) => {
 
 export default function Risks() {
   const { user } = useAuth();
-  const { data: risks, loading, error, reload } = useApi('/api/risks');
-  const { data: owners } = useApi('/api/risks/owners');
+  const { names: OWNERS } = usePeople();
+  const { rows: risks, loading, error, reload } = useTable('risks', { mapRow });
   const [modal, setModal] = useState(null); // null | { record: null } (nové) | { record } (úprava)
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -45,9 +48,9 @@ export default function Risks() {
     setFormError(null);
     try {
       if (editing) {
-        await put(`/api/risks/${editing.id}`, { ...payload, status: fd.get('status') });
+        await callFn('registries-fn', `/risks/${editing.id}`, 'PUT', { ...payload, status: fd.get('status') });
       } else {
-        await post('/api/risks', payload);
+        await callFn('registries-fn', '/risks', 'POST', payload);
       }
       setModal(null);
       reload();
@@ -61,7 +64,7 @@ export default function Risks() {
   const remove = async (r) => {
     if (!window.confirm(`Opravdu smazat riziko ${r.id} – ${r.name}?`)) return;
     try {
-      await del(`/api/risks/${r.id}`);
+      await callFn('registries-fn', `/risks/${r.id}`, 'DELETE');
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -151,10 +154,10 @@ export default function Risks() {
               <label htmlFor="risk-owner">Vlastník rizika</label>
               <select id="risk-owner" name="owner" className="select" required defaultValue={editing?.owner ?? ''}>
                 {!editing && <option value="" disabled>Vyberte vlastníka…</option>}
-                {editing && !(owners ?? []).includes(editing.owner) && (
+                {editing && !OWNERS.includes(editing.owner) && (
                   <option value={editing.owner}>{editing.owner}</option>
                 )}
-                {(owners ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             <div className="field">

@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post } from '../lib/api.js';
+import { useEffect, useState } from 'react';
+import { Query } from 'appwrite';
+import useRow from '../lib/useRow.js';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, canEdit } from '../lib/auth.jsx';
 import { changeBadge, riskBadge } from '../lib/status.js';
 import { isoToCz, isoDateTimeToCz } from '../lib/utils.js';
@@ -13,6 +15,13 @@ const CAN_ASSIGN_STATUSES = new Set(['Návrh', 'Ke schválení', 'Schváleno', '
 
 const ACTIVITY_TYPE_LABELS = { status_change: 'Stav', assignment: 'Přiřazení', comment: 'Poznámka' };
 
+const mapChange = (r) => ({
+  id: r.$id, title: r.title, description: r.description, type: r.type, risk_level: r.risk_level,
+  status: r.status, owner: r.owner, planned_date: r.planned_date, implemented_date: r.implemented_date,
+  assigned_to_user_id: r.assigned_to_user_id, assigned_to_name: r.assigned_to_name,
+});
+const mapActivity = (r) => ({ id: r.$id, type: r.type, user_name: r.user_name, from_status: r.from_status, to_status: r.to_status, note: r.note, at: r.at });
+
 function activityLine(entry) {
   const transition = entry.from_status && entry.to_status ? `${entry.from_status} → ${entry.to_status}` : null;
   if (entry.type === 'comment') return entry.note;
@@ -21,11 +30,11 @@ function activityLine(entry) {
 }
 
 function AssignControl({ assignable, currentId, busy, onAssign }) {
-  const [value, setValue] = useState(currentId ? String(currentId) : '');
+  const [value, setValue] = useState(currentId ?? '');
   return (
     <form
       className="ticket-assign"
-      onSubmit={(e) => { e.preventDefault(); if (value) onAssign(Number(value)); }}
+      onSubmit={(e) => { e.preventDefault(); if (value) onAssign(value); }}
     >
       <select className="select" value={value} onChange={(e) => setValue(e.target.value)}>
         <option value="" disabled>Vyberte realizátora…</option>
@@ -90,19 +99,24 @@ function ScheduleAction({ busy, onSubmit }) {
 
 export default function ChangeDetail({ id, onBack, onEdit }) {
   const { user } = useAuth();
-  const { data: change, loading, error, reload } = useApi(`/api/changes/${id}`);
-  const { data: activity, reload: reloadActivity } = useApi(`/api/changes/${id}/activity`);
-  const { data: assignable } = useApi('/api/users/assignable');
+  const { data: change, loading, error, reload } = useRow('changes', id, { mapRow: mapChange });
+  const activityFilter = [Query.equal('change_id', id), Query.orderAsc('at')];
+  const { rows: activity, reload: reloadActivity } = useTable('change_activity', { mapRow: mapActivity, filter: activityFilter });
 
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [commentText, setCommentText] = useState('');
+  const [assignableList, setAssignableList] = useState(null);
+
+  useEffect(() => {
+    callFn('tickets-fn', '/assignable', 'GET').then(setAssignableList).catch(() => setAssignableList([]));
+  }, []);
 
   const runAction = async (path, body) => {
     setBusy(true);
     setActionError(null);
     try {
-      await post(`/api/changes/${id}/${path}`, body);
+      await callFn('tickets-fn', `/changes/${id}/${path}`, 'POST', body);
       reload();
       reloadActivity();
     } catch (err) {
@@ -119,7 +133,7 @@ export default function ChangeDetail({ id, onBack, onEdit }) {
     setBusy(true);
     setActionError(null);
     try {
-      await post(`/api/changes/${id}/comments`, { text });
+      await callFn('tickets-fn', `/changes/${id}/comments`, 'POST', { text });
       setCommentText('');
       reloadActivity();
     } catch (err) {
@@ -167,7 +181,7 @@ export default function ChangeDetail({ id, onBack, onEdit }) {
                 <div className="ticket-actions__row">
                   {CAN_ASSIGN_STATUSES.has(status) && (
                     <AssignControl
-                      assignable={assignable} currentId={change.assigned_to_user_id} busy={busy}
+                      assignable={assignableList} currentId={change.assigned_to_user_id} busy={busy}
                       onAssign={(userId) => runAction('assign', { user_id: userId })}
                     />
                   )}

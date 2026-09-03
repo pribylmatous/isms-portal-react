@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { get, post, put, del } from '../lib/api.js';
+import useFn from '../lib/useFn.js';
+import useTable from '../lib/useTable.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, isManager, ROLE_LABELS } from '../lib/auth.jsx';
 import { trainingColor } from '../lib/status.js';
 import { isoToCz, isoDateTimeToCz } from '../lib/utils.js';
@@ -12,6 +13,9 @@ import Button from '../components/Button.jsx';
 import Modal from '../components/Modal.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import RowActions from '../components/RowActions.jsx';
+
+const ROLE_KEYS = ['reader', 'editor', 'manager'];
+const faqMapRow = (r) => ({ id: r.$id, question: r.question, answer: r.answer, position: r.position });
 
 // Osobní stav absolvování — jen pro školení s kvízem (t.hasQuiz)
 const myStatusBadge = (myCompletion) => {
@@ -28,7 +32,7 @@ function Quiz({ trainingId, onDone, onClose }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    get(`/api/trainings/${trainingId}/quiz`).then(setQuiz).catch((err) => setError(err.message));
+    callFn('registries-fn', `/trainings/${trainingId}/quiz`, 'GET').then(setQuiz).catch((err) => setError(err.message));
   }, [trainingId]);
 
   const submit = async (e) => {
@@ -37,7 +41,7 @@ function Quiz({ trainingId, onDone, onClose }) {
     setError(null);
     try {
       const payload = quiz.questions.map((_, i) => answers[i] ?? -1);
-      setResult(await post(`/api/trainings/${trainingId}/complete`, { answers: payload }));
+      setResult(await callFn('registries-fn', `/trainings/${trainingId}/complete`, 'POST', { answers: payload }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -94,7 +98,6 @@ function Quiz({ trainingId, onDone, onClose }) {
 }
 
 const emptyQuestion = () => ({ q: '', options: ['', ''], correct: 0 });
-const ROLE_KEYS = ['reader', 'editor', 'manager'];
 
 function QuestionEditor({ qIndex, question, onChange, onRemove, canRemove }) {
   const setField = (patch) => onChange({ ...question, ...patch });
@@ -164,8 +167,8 @@ function TrainingAdminModal({ initial, onClose, onSaved }) {
     setError(null);
     try {
       const payload = { name, target_roles: targetRoles, due, questions };
-      if (editing) await put(`/api/trainings/${initial.id}`, payload);
-      else await post('/api/trainings', payload);
+      if (editing) await callFn('registries-fn', `/trainings/${initial.id}`, 'PUT', payload);
+      else await callFn('registries-fn', '/trainings', 'POST', payload);
       onSaved();
       onClose();
     } catch (err) {
@@ -225,7 +228,7 @@ function RosterModal({ training, onClose }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    get(`/api/trainings/${training.id}/completions`).then(setRows).catch((err) => setError(err.message));
+    callFn('registries-fn', `/trainings/${training.id}/completions`, 'GET').then(setRows).catch((err) => setError(err.message));
   }, [training.id]);
 
   return (
@@ -261,8 +264,8 @@ function RosterModal({ training, onClose }) {
 export default function Training() {
   const { user } = useAuth();
   const manager = isManager(user);
-  const trainings = useApi('/api/trainings');
-  const faqs = useApi('/api/faqs');
+  const trainings = useFn('registries-fn', '/trainings');
+  const faqs = useTable('faqs', { orderBy: 'position', mapRow: faqMapRow });
   const [openFaq, setOpenFaq] = useState(0);
   const [quizTraining, setQuizTraining] = useState(null); // null | training
   const [adminModal, setAdminModal] = useState(null); // null | { initial: null | fullRecord }
@@ -274,7 +277,7 @@ export default function Training() {
 
   const openEdit = async (t) => {
     try {
-      const full = await get(`/api/trainings/${t.id}`);
+      const full = await callFn('registries-fn', `/trainings/${t.id}`, 'GET');
       setAdminModal({ initial: full });
     } catch (err) {
       window.alert(`Nepodařilo se načíst školení: ${err.message}`);
@@ -284,7 +287,7 @@ export default function Training() {
   const remove = async (t) => {
     if (!window.confirm(`Opravdu smazat školení „${t.name}"? Smažou se i výsledky uživatelů.`)) return;
     try {
-      await del(`/api/trainings/${t.id}`);
+      await callFn('registries-fn', `/trainings/${t.id}`, 'DELETE');
       reload();
     } catch (err) {
       window.alert(`Smazání se nezdařilo: ${err.message}`);
@@ -331,7 +334,7 @@ export default function Training() {
 
         <h2 className="section-title">Nejčastější dotazy</h2>
         <div className="faq-list">
-          {(faqs.data ?? []).map((f, i) => (
+          {(faqs.rows ?? []).map((f, i) => (
             <Accordion
               key={f.id}
               id={f.id}

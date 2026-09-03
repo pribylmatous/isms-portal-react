@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import useApi from '../lib/useApi.js';
-import { post, put } from '../lib/api.js';
+import useFn from '../lib/useFn.js';
+import { callFn } from '../lib/fn.js';
 import { useAuth, ROLE_LABELS } from '../lib/auth.jsx';
 import Badge from '../components/Badge.jsx';
 import Button from '../components/Button.jsx';
@@ -13,7 +13,7 @@ const ROLE_KEYS = ['reader', 'editor', 'manager'];
 
 export default function Users() {
   const { user } = useAuth();
-  const { data: users, loading, error, reload } = useApi('/api/users');
+  const { data: users, loading, error, reload } = useFn('tickets-fn', '/users');
   const [modal, setModal] = useState(null); // null | { record: null } | { record }
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -25,7 +25,6 @@ export default function Users() {
     e.preventDefault();
     const fd = new FormData(e.target);
     const payload = {
-      username: fd.get('username'),
       name: fd.get('name'),
       title: fd.get('title'),
       email: fd.get('email'),
@@ -36,8 +35,8 @@ export default function Users() {
     setSaving(true);
     setFormError(null);
     try {
-      if (editing) await put(`/api/users/${editing.id}`, payload);
-      else await post('/api/users', payload);
+      if (editing) await callFn('tickets-fn', `/users/${editing.id}`, 'PUT', payload);
+      else await callFn('tickets-fn', '/users', 'POST', payload);
       setModal(null);
       reload();
     } catch (err) {
@@ -51,7 +50,7 @@ export default function Users() {
     const verb = u.active ? 'deaktivovat' : 'aktivovat';
     if (!window.confirm(`Opravdu ${verb} účet „${u.name}"?`)) return;
     try {
-      await put(`/api/users/${u.id}`, { active: !u.active });
+      await callFn('tickets-fn', `/users/${u.id}`, 'PUT', { active: !u.active });
       reload();
     } catch (err) {
       window.alert(`Akce se nezdařila: ${err.message}`);
@@ -70,10 +69,10 @@ export default function Users() {
         <div className="card table-card">
           <table className="table">
             <colgroup>
-              <col /><col style={{ width: 150 }} /><col style={{ width: 200 }} /><col style={{ width: 110 }} /><col style={{ width: 110 }} /><col style={{ width: 170 }} />
+              <col /><col style={{ width: 200 }} /><col style={{ width: 110 }} /><col style={{ width: 110 }} /><col style={{ width: 170 }} />
             </colgroup>
             <thead>
-              <tr><th>Jméno</th><th>Uživatelské jméno</th><th>E-mail</th><th>Role</th><th>Stav</th><th></th></tr>
+              <tr><th>Jméno</th><th>E-mail</th><th>Role</th><th>Stav</th><th></th></tr>
             </thead>
             <tbody>
               {(users ?? []).map((u) => (
@@ -82,7 +81,6 @@ export default function Users() {
                     <div className="cell-strong">{u.name}</div>
                     <div className="cell-sub">{u.title}</div>
                   </td>
-                  <td className="cell-muted">{u.username}</td>
                   <td className="cell-muted">{u.email ?? '—'}</td>
                   <td>{ROLE_LABELS[u.role] ?? u.role}</td>
                   <td><Badge type={u.active ? 'success' : 'neutral'}>{u.active ? 'Aktivní' : 'Deaktivovaný'}</Badge></td>
@@ -112,19 +110,13 @@ export default function Users() {
                 <input id="user-name" name="name" className="input" required defaultValue={editing?.name ?? ''} />
               </div>
               <div className="field">
-                <label htmlFor="user-username">Uživatelské jméno</label>
-                <input id="user-username" name="username" className="input" required defaultValue={editing?.username ?? ''} />
-              </div>
-            </div>
-            <div className="field-row">
-              <div className="field">
                 <label htmlFor="user-title">Pracovní pozice</label>
                 <input id="user-title" name="title" className="input" defaultValue={editing?.title ?? ''} />
               </div>
-              <div className="field">
-                <label htmlFor="user-email">E-mail</label>
-                <input id="user-email" name="email" type="email" className="input" defaultValue={editing?.email ?? ''} />
-              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="user-email">E-mail</label>
+              <input id="user-email" name="email" type="email" className="input" required defaultValue={editing?.email ?? ''} />
             </div>
             <div className="field">
               <label htmlFor="user-role">Role</label>

@@ -1,5 +1,5 @@
 import { GovInfobar } from '@gov-design-system-ce/react';
-import useApi from '../lib/useApi.js';
+import useFn from '../lib/useFn.js';
 import { DOMAIN_LABELS, DEADLINE_TONES, dateSeverity, domainColor } from '../lib/status.js';
 import { isoToCz, todayCz } from '../lib/utils.js';
 import DataState from '../components/DataState.jsx';
@@ -8,7 +8,7 @@ import ProgressBar from '../components/ProgressBar.jsx';
 const ALERT_COLOR = { warn: 'warning', danger: 'error' };
 
 export default function Dashboard() {
-  const { data, loading, error, reload } = useApi('/api/dashboard');
+  const { data, loading, error, reload } = useFn('registries-fn', '/dashboard');
 
   return (
     <>
